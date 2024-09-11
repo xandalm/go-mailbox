@@ -2,13 +2,16 @@ package mailbox
 
 import (
 	"errors"
+	"slices"
 )
 
 type stubBox struct {
 	Id string
 }
 
-type stubProvider struct{}
+type stubProvider struct {
+	Boxes []*stubBox
+}
 
 func (s *stubProvider) Create(id string) (Box, error) {
 	return &stubBox{id}, nil
@@ -16,6 +19,13 @@ func (s *stubProvider) Create(id string) (Box, error) {
 
 func (s *stubProvider) Get(id string) (Box, error) {
 	return &stubBox{id}, nil
+}
+
+func (s *stubProvider) Delete(id string) error {
+	s.Boxes = slices.DeleteFunc(s.Boxes, func(sb *stubBox) bool {
+		return sb.Id == id
+	})
+	return nil
 }
 
 func (s *stubProvider) List() ([]string, error) {
@@ -32,6 +42,10 @@ func (s *stubFailingProvider) Create(id string) (Box, error) {
 
 func (s *stubFailingProvider) Get(id string) (Box, error) {
 	return nil, errFoo
+}
+
+func (s *stubFailingProvider) Delete(id string) error {
+	return errFoo
 }
 
 func (s *stubFailingProvider) List() ([]string, error) {

@@ -12,11 +12,13 @@ var (
 
 type Manager interface {
 	RequestBox(string) (Box, error)
+	EraseBox(string) error
 }
 
 type Provider interface {
 	Create(string) (Box, error)
 	Get(string) (Box, error)
+	Delete(string) error
 	List() ([]string, error)
 }
 
@@ -64,4 +66,11 @@ func (m *manager) RequestBox(id string) (Box, error) {
 		return m.getBox(id)
 	}
 	return m.createBox(pos, id)
+}
+
+func (m *manager) EraseBox(id string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.p.Delete(id)
+	return nil
 }
