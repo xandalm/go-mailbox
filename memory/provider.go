@@ -1,6 +1,8 @@
 package memory
 
-import mailbox "github.com/xandalm/go-mailbox"
+import (
+	mailbox "github.com/xandalm/go-mailbox"
+)
 
 type provider struct {
 	boxes map[string]*box
@@ -11,7 +13,7 @@ func (p *provider) contains(id string) bool {
 	return ok
 }
 
-func (p *provider) Create(id string) (mailbox.Box, error) {
+func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if p.contains(id) {
 		return nil, mailbox.ErrBoxIDDuplicity
 	}
@@ -20,14 +22,14 @@ func (p *provider) Create(id string) (mailbox.Box, error) {
 	return b, nil
 }
 
-func (p *provider) Delete(string) error {
+func (p *provider) Delete(string) mailbox.Error {
 	panic("unimplemented")
 }
 
-func (p *provider) Get(string) (mailbox.Box, error) {
+func (p *provider) Get(string) (mailbox.Box, mailbox.Error) {
 	panic("unimplemented")
 }
 
-func (p *provider) List() ([]string, error) {
+func (p *provider) List() ([]string, mailbox.Error) {
 	panic("unimplemented")
 }

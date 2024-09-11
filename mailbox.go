@@ -1,31 +1,51 @@
 package mailbox
 
 import (
-	"errors"
 	"slices"
 	"sync"
 )
 
+type Error interface {
+	sign() string
+	Error() string
+}
+
+type mailboxError struct {
+	msg string
+}
+
+func newError(msg string) *mailboxError {
+	return &mailboxError{msg}
+}
+
+func (e mailboxError) sign() string {
+	return "mailbox"
+}
+
+func (e mailboxError) Error() string {
+	return e.sign() + ": " + e.msg
+}
+
 var (
-	ErrBoxIDDuplicity = errors.New("mailbox: id duplicity")
+	ErrBoxIDDuplicity Error = newError("duplicity of box identifier")
 )
 
 type Manager interface {
 	// Create or restore a box.
-	RequestBox(string) (Box, error)
+	RequestBox(string) (Box, Error)
 	// Remove a box and all its contents.
-	EraseBox(string) error
+	EraseBox(string) Error
 }
 
 type Provider interface {
 	// Create a new box.
-	Create(string) (Box, error)
+	Create(string) (Box, Error)
 	// Get existing box.
-	Get(string) (Box, error)
+	Get(string) (Box, Error)
 	// Delete existing box and all its contents.
-	Delete(string) error
+	Delete(string) Error
 	// List the identifier from all existing boxes.
-	List() ([]string, error)
+	List() ([]string, Error)
 }
 
 type Box interface {
@@ -37,13 +57,13 @@ type Box interface {
 	// posted in its mostly compatible type,
 	// like: integer, float, boolean,
 	// string or json format string.
-	Post(any, any) error
+	Post(any, any) Error
 	// Read the corresponding content.
-	Get(any) (any, error)
+	Get(any) (any, Error)
 	// Remove the corresponding content.
-	Delete(any) error
+	Delete(any) Error
 	// Remove all the existing contents.
-	Clean() error
+	Clean() Error
 }
 
 type manager struct {
@@ -67,7 +87,7 @@ func (m *manager) insert(pos int, id string) {
 	m.idx = slices.Insert(m.idx, pos, id)
 }
 
-func (m *manager) createBox(pos int, id string) (Box, error) {
+func (m *manager) createBox(pos int, id string) (Box, Error) {
 	b, err := m.p.Create(id)
 	if err == nil {
 		m.insert(pos, id)
@@ -75,11 +95,11 @@ func (m *manager) createBox(pos int, id string) (Box, error) {
 	return b, err
 }
 
-func (m *manager) getBox(id string) (Box, error) {
+func (m *manager) getBox(id string) (Box, Error) {
 	return m.p.Get(id)
 }
 
-func (m *manager) RequestBox(id string) (Box, error) {
+func (m *manager) RequestBox(id string) (Box, Error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	has, pos := m.contains(id)
@@ -89,7 +109,7 @@ func (m *manager) RequestBox(id string) (Box, error) {
 	return m.createBox(pos, id)
 }
 
-func (m *manager) EraseBox(id string) error {
+func (m *manager) EraseBox(id string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.p.Delete(id)
