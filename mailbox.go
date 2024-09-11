@@ -9,27 +9,26 @@ var (
 	ErrBoxIDDuplicity = errors.New("mailbox: id duplicity")
 )
 
-type Box struct {
-	Id string
-}
-
 type Manager interface {
 	CreateBox(string) (Box, error)
 }
 
-type Storage interface {
-	Save(Box) error
+type Provider interface {
+	Create(string) (Box, error)
 	List() ([]string, error)
 }
 
+type Box interface {
+}
+
 type manager struct {
-	st  Storage
+	p   Provider
 	idx []string
 }
 
-func NewManager(s Storage) Manager {
-	l, _ := s.List()
-	m := &manager{s, l}
+func NewManager(f Provider) Manager {
+	l, _ := f.List()
+	m := &manager{f, l}
 	return m
 }
 
@@ -45,10 +44,9 @@ func (m *manager) insert(pos int, id string) {
 func (m *manager) CreateBox(id string) (Box, error) {
 	has, pos := m.contains(id)
 	if has {
-		return Box{}, ErrBoxIDDuplicity
+		return nil, ErrBoxIDDuplicity
 	}
-	b := Box{id}
-	m.st.Save(b)
+	b, _ := m.p.Create(id)
 	m.insert(pos, id)
 	return b, nil
 }
