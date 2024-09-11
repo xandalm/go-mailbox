@@ -9,7 +9,7 @@ import (
 
 func TestProvider_Create(t *testing.T) {
 	var p mailbox.Provider = &provider{
-		boxes: []*box{},
+		boxes: map[string]*box{},
 	}
 
 	got, err := p.Create("box_1")
@@ -17,4 +17,11 @@ func TestProvider_Create(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 	assert.NotEmpty(t, p.(*provider).boxes)
+
+	t.Run("returns error for the id duplicity", func(t *testing.T) {
+		b, got := p.Create("box_1")
+
+		assert.Nil(t, b)
+		assert.Error(t, got, mailbox.ErrBoxIDDuplicity)
+	})
 }
