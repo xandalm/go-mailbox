@@ -25,3 +25,17 @@ func TestProvider_Create(t *testing.T) {
 		assert.Error(t, got, mailbox.ErrBoxIDDuplicity)
 	})
 }
+
+func TestProvider_Get(t *testing.T) {
+	p := &provider{
+		boxes: map[string]*box{
+			"box_1": {},
+		},
+	}
+
+	got, err := p.Get("box_1")
+	want := p.boxes["box_1"]
+
+	assert.NoError(t, err)
+	assert.Equal(t, got.(*box), want)
+}

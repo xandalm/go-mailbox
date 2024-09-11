@@ -26,8 +26,9 @@ func (p *provider) Delete(string) mailbox.Error {
 	panic("unimplemented")
 }
 
-func (p *provider) Get(string) (mailbox.Box, mailbox.Error) {
-	panic("unimplemented")
+func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
+	b := p.boxes[id]
+	return b, nil
 }
 
 func (p *provider) List() ([]string, mailbox.Error) {
