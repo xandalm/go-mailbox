@@ -49,20 +49,13 @@ type Provider interface {
 }
 
 type Box interface {
-	// Post content in the box.
-	//
-	// The first argument must be an atomic type,
-	// will be the id for the posting content.
-	// The second argument is the content that will be
-	// posted in its mostly compatible type,
-	// like: integer, float, boolean,
-	// string or json format string.
+	// Post content.
 	Post(any, any) Error
 	// Read the corresponding content.
 	Get(any) (any, Error)
 	// Remove the corresponding content.
 	Delete(any) Error
-	// Remove all the existing contents.
+	// Remove all its existing contents.
 	Clean() Error
 }
 
