@@ -3,6 +3,7 @@ package mailbox
 import (
 	"errors"
 	"slices"
+	"sync"
 )
 
 var (
@@ -10,11 +11,12 @@ var (
 )
 
 type Manager interface {
-	CreateBox(string) (Box, error)
+	RequestBox(string) (Box, error)
 }
 
 type Provider interface {
 	Create(string) (Box, error)
+	Get(string) (Box, error)
 	List() ([]string, error)
 }
 
@@ -22,13 +24,14 @@ type Box interface {
 }
 
 type manager struct {
+	mu  sync.Mutex
 	p   Provider
 	idx []string
 }
 
-func NewManager(f Provider) Manager {
-	l, _ := f.List()
-	m := &manager{f, l}
+func NewManager(p Provider) Manager {
+	l, _ := p.List()
+	m := &manager{p: p, idx: l}
 	return m
 }
 
@@ -41,12 +44,24 @@ func (m *manager) insert(pos int, id string) {
 	m.idx = slices.Insert(m.idx, pos, id)
 }
 
-func (m *manager) CreateBox(id string) (Box, error) {
+func (m *manager) createBox(pos int, id string) (Box, error) {
+	b, err := m.p.Create(id)
+	if err == nil {
+		m.insert(pos, id)
+	}
+	return b, err
+}
+
+func (m *manager) getBox(id string) (Box, error) {
+	return m.p.Get(id)
+}
+
+func (m *manager) RequestBox(id string) (Box, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	has, pos := m.contains(id)
 	if has {
-		return nil, ErrBoxIDDuplicity
+		return m.getBox(id)
 	}
-	b, _ := m.p.Create(id)
-	m.insert(pos, id)
-	return b, nil
+	return m.createBox(pos, id)
 }

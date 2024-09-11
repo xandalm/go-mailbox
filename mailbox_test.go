@@ -6,31 +6,22 @@ import (
 	"github.com/xandalm/go-session/testing/assert"
 )
 
-func TestBoxCreating(t *testing.T) {
+func TestBoxRequesting(t *testing.T) {
 
 	provider := &stubProvider{}
 	manager := NewManager(provider)
 
-	got, err := manager.CreateBox("box_1")
+	got, err := manager.RequestBox("box_1")
 
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 
-	t.Run("returns error for duplicity", func(t *testing.T) {
-		box, got := manager.CreateBox("box_1")
-		want := ErrBoxIDDuplicity
+	t.Run("returns error for provider failing while creating box", func(t *testing.T) {
+		provider := &stubFailingProvider{}
+		manager := NewManager(provider)
 
-		assert.Nil(t, box)
-		assert.Error(t, got, want)
+		_, got := manager.RequestBox("box_1")
+
+		assert.AnError(t, got)
 	})
-}
-
-type stubProvider struct{}
-
-func (s *stubProvider) Create(id string) (Box, error) {
-	return nil, nil
-}
-
-func (s *stubProvider) List() ([]string, error) {
-	return nil, nil
 }
