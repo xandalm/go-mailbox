@@ -39,3 +39,16 @@ func TestProvider_Get(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, got.(*box), want)
 }
+
+func TestProvider_Delete(t *testing.T) {
+	p := &provider{
+		boxes: map[string]*box{
+			"box_1": {},
+		},
+	}
+
+	err := p.Delete("box_1")
+
+	assert.NoError(t, err)
+	assert.Empty(t, p.boxes)
+}
