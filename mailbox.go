@@ -11,20 +11,39 @@ var (
 )
 
 type Manager interface {
+	// Create or restore a box.
 	RequestBox(string) (Box, error)
+	// Remove a box and all its contents.
 	EraseBox(string) error
 }
 
 type Provider interface {
+	// Create a new box.
 	Create(string) (Box, error)
+	// Get existing box.
 	Get(string) (Box, error)
+	// Delete existing box and all its contents.
 	Delete(string) error
+	// List the identifier from all existing boxes.
 	List() ([]string, error)
 }
 
 type Box interface {
+	// Post content in the box.
+	//
+	// The first argument must be an atomic type,
+	// will be the id for the posting content.
+	// The second argument is the content that will be
+	// posted in its mostly compatible type,
+	// like: integer, float, boolean,
+	// string or json format string.
 	Post(any, any) error
-	Read(any) (any, error)
+	// Read the corresponding content.
+	Get(any) (any, error)
+	// Remove the corresponding content.
+	Delete(any) error
+	// Remove all the existing contents.
+	Clean() error
 }
 
 type manager struct {

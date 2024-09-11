@@ -13,7 +13,15 @@ func (s *stubBox) Post(any, any) error {
 	panic("unimplemented")
 }
 
-func (s *stubBox) Read(any) (any, error) {
+func (s *stubBox) Get(any) (any, error) {
+	panic("unimplemented")
+}
+
+func (s *stubBox) Delete(any) error {
+	panic("unimplemented")
+}
+
+func (s *stubBox) Clean() error {
 	panic("unimplemented")
 }
 
