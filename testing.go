@@ -9,6 +9,14 @@ type stubBox struct {
 	Id string
 }
 
+func (s *stubBox) Post(any, any) error {
+	panic("unimplemented")
+}
+
+func (s *stubBox) Read(any) (any, error) {
+	panic("unimplemented")
+}
+
 type stubProvider struct {
 	Boxes []*stubBox
 }

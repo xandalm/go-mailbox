@@ -23,6 +23,8 @@ type Provider interface {
 }
 
 type Box interface {
+	Post(any, any) error
+	Read(any) (any, error)
 }
 
 type manager struct {
