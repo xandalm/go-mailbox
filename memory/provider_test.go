@@ -52,3 +52,27 @@ func TestProvider_Delete(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, p.boxes)
 }
+
+func TestProvider_List(t *testing.T) {
+	p := &provider{
+		boxes: map[string]*box{
+			"box_3": {},
+			"box_1": {},
+			"box_2": {},
+		},
+	}
+
+	got, err := p.List()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+
+	keys := []string{}
+	for k := range p.boxes {
+		keys = append(keys, k)
+	}
+
+	mailbox.AssertContainsFunc(t, keys, "box_1", func(e string, lf string) bool {
+		return e == lf
+	})
+}

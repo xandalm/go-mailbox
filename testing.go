@@ -2,6 +2,7 @@ package mailbox
 
 import (
 	"slices"
+	"testing"
 )
 
 type stubBox struct {
@@ -65,4 +66,15 @@ func (s *stubFailingProvider) Delete(id string) Error {
 
 func (s *stubFailingProvider) List() ([]string, Error) {
 	return nil, errFoo
+}
+
+func AssertContainsFunc[A any, B any](t testing.TB, collec []A, lf B, fn func(e A, lf B) bool) {
+	t.Helper()
+
+	for i := 0; i < len(collec); i++ {
+		if fn(collec[i], lf) {
+			return
+		}
+	}
+	t.Fatalf("there's no %v in %v", lf, collec)
 }
