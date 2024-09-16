@@ -26,8 +26,11 @@ func (b *box) Delete(any) mailbox.Error {
 	panic("unimplemented")
 }
 
-func (b *box) Get(any) (any, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) Get(k any) (any, mailbox.Error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	return b.contents[k], nil
 }
 
 func (b *box) Post(c any) (any, mailbox.Error) {

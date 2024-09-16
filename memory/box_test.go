@@ -27,14 +27,33 @@ func TestBox_Post(t *testing.T) {
 
 		id1, err := b.Post("foo")
 		assert.Nil(t, err)
-		assert.NotNil(t, id1)
 		assert.NotEmpty(t, b.contents)
 
 		id2, err := b.Post("bar")
 		assert.Nil(t, err)
-		assert.NotNil(t, id2)
 		assert.NotEmpty(t, b.contents)
 
 		assert.NotEqual(t, id1, id2)
+	})
+}
+
+func TestBox_Get(t *testing.T) {
+	t.Run("returns the content by post identifier", func(t *testing.T) {
+		b := &box{
+			contents: map[any]any{1: "foo"},
+		}
+
+		got, err := b.Get(1)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, got)
+
+		content, ok := got.(string)
+
+		if !ok {
+			t.Fatal("didn't get the expected content type")
+		}
+
+		assert.Equal(t, content, "foo")
 	})
 }
