@@ -3,6 +3,7 @@ package memory
 import (
 	"testing"
 
+	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -34,6 +35,15 @@ func TestBox_Post(t *testing.T) {
 		assert.NotEmpty(t, b.contents)
 
 		assert.NotEqual(t, id1, id2)
+	})
+	t.Run("returns error because nil content", func(t *testing.T) {
+		b := &box{
+			contents: map[any]any{},
+		}
+
+		id, err := b.Post(nil)
+		assert.Nil(t, id)
+		assert.Error(t, err, mailbox.ErrNilContent)
 	})
 }
 

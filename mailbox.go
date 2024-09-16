@@ -27,7 +27,8 @@ func (e mailboxError) Error() string {
 }
 
 var (
-	ErrBoxIDDuplicity Error = newError("duplicity of box identifier")
+	ErrBoxIDDuplicity Error = newError("repeated box identifier")
+	ErrNilContent     Error = newError("can't post nil content")
 )
 
 type Manager interface {
