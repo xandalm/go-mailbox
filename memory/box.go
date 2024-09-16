@@ -19,7 +19,11 @@ func (b *box) key() any {
 }
 
 func (b *box) Clean() mailbox.Error {
-	panic("unimplemented")
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	clear(b.contents)
+	return nil
 }
 
 func (b *box) Delete(k any) mailbox.Error {

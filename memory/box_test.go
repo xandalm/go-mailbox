@@ -80,3 +80,16 @@ func TestBox_Delete(t *testing.T) {
 		assert.Empty(t, b.contents)
 	})
 }
+
+func TestBox_Clean(t *testing.T) {
+	t.Run("remove all content", func(t *testing.T) {
+		b := &box{
+			contents: map[any]any{1: "foo", 2: "bar", 3: struct{ data any }{"foobarbaz"}},
+		}
+
+		err := b.Clean()
+
+		assert.Nil(t, err)
+		assert.Empty(t, b.contents)
+	})
+}
