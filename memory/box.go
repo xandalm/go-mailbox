@@ -22,8 +22,12 @@ func (b *box) Clean() mailbox.Error {
 	panic("unimplemented")
 }
 
-func (b *box) Delete(any) mailbox.Error {
-	panic("unimplemented")
+func (b *box) Delete(k any) mailbox.Error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	delete(b.contents, k)
+	return nil
 }
 
 func (b *box) Get(k any) (any, mailbox.Error) {

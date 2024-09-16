@@ -67,3 +67,16 @@ func TestBox_Get(t *testing.T) {
 		assert.Equal(t, content, "foo")
 	})
 }
+
+func TestBox_Delete(t *testing.T) {
+	t.Run("remove content", func(t *testing.T) {
+		b := &box{
+			contents: map[any]any{1: "foo"},
+		}
+
+		err := b.Delete(1)
+
+		assert.Nil(t, err)
+		assert.Empty(t, b.contents)
+	})
+}
