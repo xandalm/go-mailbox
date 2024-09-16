@@ -49,11 +49,11 @@ type Provider interface {
 }
 
 type Box interface {
-	// Post content.
-	Post(any, any) Error
-	// Read the corresponding content.
+	// Post content and return its identifier.
+	Post(any) (any, Error)
+	// Read the content matching to the identifier.
 	Get(any) (any, Error)
-	// Remove the corresponding content.
+	// Remove the content matching to the identifier.
 	Delete(any) Error
 	// Remove all its existing contents.
 	Clean() Error

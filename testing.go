@@ -9,7 +9,7 @@ type stubBox struct {
 	Id string
 }
 
-func (s *stubBox) Post(any, any) Error {
+func (s *stubBox) Post(any) (any, Error) {
 	panic("unimplemented")
 }
 
