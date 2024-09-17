@@ -56,7 +56,7 @@ var (
 type Manager interface {
 	// Create or restore a box.
 	RequestBox(string) (Box, Error)
-	// Remove a box and all its contents.
+	// Remove box and all its contents.
 	EraseBox(string) Error
 	// Check if the box exists
 	ContainsBox(string) bool
@@ -131,10 +131,14 @@ func (m *manager) RequestBox(id string) (Box, Error) {
 func (m *manager) EraseBox(id string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if has, _ := m.contains(id); !has {
+	has, pos := m.contains(id)
+	if !has {
 		return ErrUnknownBox
 	}
-	m.p.Delete(id)
+	if err := m.p.Delete(id); err != nil {
+		return err
+	}
+	m.idx = slices.Delete(m.idx, pos, pos+1)
 	return nil
 }
 

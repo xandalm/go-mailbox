@@ -2,3 +2,5 @@ github.com/xandalm/go-session v0.0.0-20240905203240-87e567be5c2c h1:1C3SWplVNGr8
 github.com/xandalm/go-session v0.0.0-20240905203240-87e567be5c2c/go.mod h1:7X3iKbNCVAgWqPxZTH26IskwpPhwIochycrwx6apb+A=
 github.com/xandalm/go-testing v0.0.0-20240914153536-fbaa502fac8c h1:J1rM1ssi6xL4dnOhHDTmyFCgFKSn/iXuU4vlzIJI1N4=
 github.com/xandalm/go-testing v0.0.0-20240914153536-fbaa502fac8c/go.mod h1:a4iGzX59CePssy/cQXcNBQBCuX8+cFTU2EF1xCuoCdA=
+github.com/xandalm/go-testing v0.0.0-20240917181053-e8bd080c82cd h1:WP5Gk3w3s751qtL5q6fqJzb1URnWiauFtfBYND3l4MM=
+github.com/xandalm/go-testing v0.0.0-20240917181053-e8bd080c82cd/go.mod h1:a4iGzX59CePssy/cQXcNBQBCuX8+cFTU2EF1xCuoCdA=

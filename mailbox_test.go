@@ -8,19 +8,27 @@ import (
 
 func TestBoxRequesting(t *testing.T) {
 
-	provider := &stubProvider{}
-	manager := NewManager(provider)
+	p := &stubProvider{}
+	m := &manager{
+		p:   p,
+		idx: []string{},
+	}
 
-	got, err := manager.RequestBox("box_1")
+	got, err := m.RequestBox("box_1")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, got)
 
-	t.Run("returns error for failing provider", func(t *testing.T) {
-		provider := &stubFailingProvider{}
-		manager := NewManager(provider)
+	assert.Contains(t, m.idx, "box_1")
+	assert.ContainsFunc(t, p.Boxes, "box_1", func(e *stubBox, lf string) bool {
+		return e.Id == lf
+	})
 
-		_, got := manager.RequestBox("box_1")
+	t.Run("returns error for failing provider", func(t *testing.T) {
+		p := &stubFailingProvider{}
+		m := NewManager(p)
+
+		_, got := m.RequestBox("box_1")
 
 		assert.NotNil(t, got)
 	})
@@ -28,18 +36,24 @@ func TestBoxRequesting(t *testing.T) {
 
 func TestBoxErasing(t *testing.T) {
 
-	provider := &stubProvider{
+	p := &stubProvider{
 		Boxes: []*stubBox{{"box_1"}},
 	}
-	manager := NewManager(provider)
+	m := &manager{
+		p:   p,
+		idx: []string{"box_1"},
+	}
 
-	err := manager.EraseBox("box_1")
+	err := m.EraseBox("box_1")
 
 	assert.Nil(t, err)
-	assert.Empty(t, provider.Boxes)
+	assert.NotContains(t, m.idx, "box_1")
+	assert.NotContainsFunc(t, p.Boxes, "box_1", func(sb *stubBox, s string) bool {
+		return sb.Id == s
+	})
 
 	t.Run("returns error for inexistent box", func(t *testing.T) {
-		err := manager.EraseBox("box_2")
+		err := m.EraseBox("box_2")
 
 		assert.Error(t, err, ErrUnknownBox)
 	})

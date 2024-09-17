@@ -30,7 +30,9 @@ type stubProvider struct {
 }
 
 func (s *stubProvider) Create(id string) (Box, Error) {
-	return &stubBox{id}, nil
+	b := &stubBox{id}
+	s.Boxes = append(s.Boxes, b)
+	return b, nil
 }
 
 func (s *stubProvider) Get(id string) (Box, Error) {
