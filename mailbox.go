@@ -48,9 +48,14 @@ func (e *mailboxDetailedError) Error() string {
 }
 
 var (
-	ErrInvalidBoxIdentifier Error = newError("invalid box identifier")
-	ErrUnknownBox           Error = newError("there's no such box")
-	ErrInvalidPostContent   Error = newError("invalid content to post in box")
+	ErrUnableToCreateBox     Error = newError("unable to create the box")
+	ErrUnableToRestoreBox    Error = newError("unable to restore box")
+	ErrUnableToDeleteBox     Error = newError("unable to delete the box")
+	ErrUnableToPostContent   Error = newError("unable to post content")
+	ErrUnableToReadContent   Error = newError("unable to read content")
+	ErrUnableCleanBoxContent Error = newError("unable to clear box contents")
+
+	ErrUnknownBox Error = newError("there's no such box")
 )
 
 type Manager interface {

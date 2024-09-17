@@ -7,7 +7,7 @@ import (
 )
 
 var (
-	ErrPostingNilContent = mailbox.NewDetailedError(mailbox.ErrInvalidPostContent, "can't post nil content")
+	ErrPostingNilContent = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
 )
 
 type box struct {

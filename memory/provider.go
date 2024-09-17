@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrInvalidBoxIdentifier, "can't be empty")
-	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrInvalidBoxIdentifier, "repeated identifier")
+	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
+	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "repeated identifier")
 )
 
 type provider struct {
