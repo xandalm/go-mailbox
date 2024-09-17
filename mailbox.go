@@ -31,7 +31,8 @@ type mailboxDetailedError struct {
 	info string
 }
 
-func NewDetailedError(err Error, info string) *mailboxDetailedError {
+// Returns a detailed error with the addicional info provided
+func NewDetailedError(err Error, info string) Error {
 	if err, ok := err.(*mailboxError); ok {
 		return &mailboxDetailedError{err, info}
 	}
@@ -43,7 +44,7 @@ func (e *mailboxDetailedError) sign() string {
 }
 
 func (e *mailboxDetailedError) Error() string {
-	return e.sign() + "\n" + e.info
+	return e.sign() + ", " + e.info
 }
 
 var (
