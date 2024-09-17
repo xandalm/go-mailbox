@@ -22,7 +22,7 @@ func TestProvider_Create(t *testing.T) {
 		b, got := p.Create("box_1")
 
 		assert.Nil(t, b)
-		assert.Error(t, got, mailbox.ErrRepeatedBoxIdentifier)
+		assert.Error(t, got, ErrRepeatedBoxIdentifier)
 	})
 }
 

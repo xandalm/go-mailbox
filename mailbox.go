@@ -18,19 +18,38 @@ func newError(msg string) *mailboxError {
 	return &mailboxError{msg}
 }
 
-func (e mailboxError) sign() string {
+func (e *mailboxError) sign() string {
 	return "mailbox"
 }
 
-func (e mailboxError) Error() string {
+func (e *mailboxError) Error() string {
 	return e.sign() + ": " + e.msg
 }
 
+type mailboxDetailedError struct {
+	e    *mailboxError
+	info string
+}
+
+func NewDetailedError(err Error, info string) *mailboxDetailedError {
+	if err, ok := err.(*mailboxError); ok {
+		return &mailboxDetailedError{err, info}
+	}
+	panic("invalid type of error")
+}
+
+func (e *mailboxDetailedError) sign() string {
+	return e.e.Error()
+}
+
+func (e *mailboxDetailedError) Error() string {
+	return e.sign() + "\n" + e.info
+}
+
 var (
-	ErrInvalidBoxIdentifier  Error = newError("invalid box identifier")
-	ErrRepeatedBoxIdentifier Error = newError("repeated box identifier")
-	ErrUnknownBox            Error = newError("there's no such box")
-	ErrPostingNilContent     Error = newError("can't post nil content")
+	ErrInvalidBoxIdentifier Error = newError("invalid box identifier")
+	ErrUnknownBox           Error = newError("there's no such box")
+	ErrInvalidPostContent   Error = newError("invalid content to post in box")
 )
 
 type Manager interface {
@@ -100,9 +119,6 @@ func (m *manager) getBox(id string) (Box, Error) {
 func (m *manager) RequestBox(id string) (Box, Error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if id == "" {
-		return nil, ErrInvalidBoxIdentifier
-	}
 
 	has, pos := m.contains(id)
 	if has {

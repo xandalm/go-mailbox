@@ -6,6 +6,10 @@ import (
 	"github.com/xandalm/go-mailbox"
 )
 
+var (
+	ErrPostingNilContent = mailbox.NewDetailedError(mailbox.ErrInvalidPostContent, "can't post nil content")
+)
+
 type box struct {
 	pk       uint64
 	mu       sync.RWMutex
@@ -48,7 +52,7 @@ func (b *box) Get(k any) (any, mailbox.Error) {
 
 func (b *box) Post(c any) (any, mailbox.Error) {
 	if c == nil {
-		return nil, mailbox.ErrPostingNilContent
+		return nil, ErrPostingNilContent
 	}
 
 	b.mu.Lock()

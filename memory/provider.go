@@ -6,6 +6,10 @@ import (
 	mailbox "github.com/xandalm/go-mailbox"
 )
 
+var (
+	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrInvalidBoxIdentifier, "repeated identifier")
+)
+
 type provider struct {
 	mu    sync.RWMutex
 	boxes map[string]*box
@@ -27,7 +31,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	defer p.mu.Unlock()
 
 	if p.contains(id) {
-		return nil, mailbox.ErrRepeatedBoxIdentifier
+		return nil, ErrRepeatedBoxIdentifier
 	}
 	b := newBox()
 	p.boxes[id] = b

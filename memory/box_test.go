@@ -3,7 +3,6 @@ package memory
 import (
 	"testing"
 
-	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -43,7 +42,7 @@ func TestBox_Post(t *testing.T) {
 
 		id, err := b.Post(nil)
 		assert.Nil(t, id)
-		assert.Error(t, err, mailbox.ErrPostingNilContent)
+		assert.Error(t, err, ErrPostingNilContent)
 	})
 }
 
