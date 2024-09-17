@@ -30,6 +30,10 @@ func (b *box) Post(any) (any, mailbox.Error) {
 	panic("unimplemented")
 }
 
+var (
+	ErrEmptyBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
+)
+
 type provider struct {
 	path string
 }
@@ -45,6 +49,9 @@ func NewProvider(path, dir string) *provider {
 }
 
 func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
+	if id == "" {
+		return nil, ErrEmptyBoxIdentifier
+	}
 	b := &box{}
 	os.Mkdir(filepath.Join(p.path, id), 0666)
 	return b, nil

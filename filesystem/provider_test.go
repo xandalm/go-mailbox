@@ -28,6 +28,13 @@ func TestProvider_Create(t *testing.T) {
 		return de.Name() == s
 	})
 
+	t.Run("return error by empty id", func(t *testing.T) {
+		b, got := p.Create("")
+
+		assert.Nil(t, b)
+		assert.Error(t, got, ErrEmptyBoxIdentifier)
+	})
+
 	t.Cleanup(func() {
 		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
 			log.Fatal("unable to remove residual data")
