@@ -11,6 +11,12 @@ type provider struct {
 	boxes map[string]*box
 }
 
+func NewProvider() *provider {
+	return &provider{
+		boxes: make(map[string]*box),
+	}
+}
+
 func (p *provider) contains(id string) bool {
 	_, ok := p.boxes[id]
 	return ok
@@ -23,7 +29,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if p.contains(id) {
 		return nil, mailbox.ErrBoxIDDuplicity
 	}
-	b := &box{}
+	b := newBox()
 	p.boxes[id] = b
 	return b, nil
 }

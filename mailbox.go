@@ -27,6 +27,7 @@ func (e mailboxError) Error() string {
 }
 
 var (
+	ErrBoxIDInvalid   Error = newError("invalid box identifier")
 	ErrBoxIDDuplicity Error = newError("repeated box identifier")
 	ErrNilContent     Error = newError("can't post nil content")
 )
@@ -96,6 +97,10 @@ func (m *manager) getBox(id string) (Box, Error) {
 func (m *manager) RequestBox(id string) (Box, Error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if id == "" {
+		return nil, ErrBoxIDInvalid
+	}
+
 	has, pos := m.contains(id)
 	if has {
 		return m.getBox(id)

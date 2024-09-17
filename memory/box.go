@@ -12,10 +12,15 @@ type box struct {
 	contents map[any]any
 }
 
+func newBox() *box {
+	return &box{
+		contents: make(map[any]any),
+	}
+}
+
 func (b *box) key() any {
-	k := b.pk
 	b.pk++
-	return k
+	return b.pk
 }
 
 func (b *box) Clean() mailbox.Error {
