@@ -27,9 +27,10 @@ func (e mailboxError) Error() string {
 }
 
 var (
-	ErrBoxIDInvalid   Error = newError("invalid box identifier")
-	ErrBoxIDDuplicity Error = newError("repeated box identifier")
-	ErrNilContent     Error = newError("can't post nil content")
+	ErrInvalidBoxIdentifier  Error = newError("invalid box identifier")
+	ErrRepeatedBoxIdentifier Error = newError("repeated box identifier")
+	ErrUnknownBox            Error = newError("there's no such box")
+	ErrPostingNilContent     Error = newError("can't post nil content")
 )
 
 type Manager interface {
@@ -100,7 +101,7 @@ func (m *manager) RequestBox(id string) (Box, Error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if id == "" {
-		return nil, ErrBoxIDInvalid
+		return nil, ErrInvalidBoxIdentifier
 	}
 
 	has, pos := m.contains(id)
@@ -113,6 +114,9 @@ func (m *manager) RequestBox(id string) (Box, Error) {
 func (m *manager) EraseBox(id string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if has, _ := m.contains(id); !has {
+		return ErrUnknownBox
+	}
 	m.p.Delete(id)
 	return nil
 }

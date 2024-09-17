@@ -37,6 +37,12 @@ func TestBoxErasing(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.Empty(t, provider.Boxes)
+
+	t.Run("returns error for inexistent box", func(t *testing.T) {
+		err := manager.EraseBox("box_2")
+
+		assert.Error(t, err, ErrUnknownBox)
+	})
 }
 
 func TestCheckingForBox(t *testing.T) {
