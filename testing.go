@@ -45,7 +45,11 @@ func (s *stubProvider) Delete(id string) Error {
 }
 
 func (s *stubProvider) List() ([]string, Error) {
-	return nil, nil
+	ret := []string{}
+	for i := 0; i < len(s.Boxes); i++ {
+		ret = append(ret, s.Boxes[i].Id)
+	}
+	return ret, nil
 }
 
 var errFoo Error = newError("foo error")

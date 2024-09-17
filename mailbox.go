@@ -37,6 +37,8 @@ type Manager interface {
 	RequestBox(string) (Box, Error)
 	// Remove a box and all its contents.
 	EraseBox(string) Error
+	// Check if the box exists
+	ContainsBox(string) bool
 }
 
 type Provider interface {
@@ -113,4 +115,11 @@ func (m *manager) EraseBox(id string) Error {
 	defer m.mu.Unlock()
 	m.p.Delete(id)
 	return nil
+}
+
+func (m *manager) ContainsBox(id string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	has, _ := m.contains(id)
+	return has
 }

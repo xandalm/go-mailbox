@@ -3,7 +3,7 @@ package mailbox
 import (
 	"testing"
 
-	"github.com/xandalm/go-session/testing/assert"
+	"github.com/xandalm/go-testing/assert"
 )
 
 func TestBoxRequesting(t *testing.T) {
@@ -13,7 +13,7 @@ func TestBoxRequesting(t *testing.T) {
 
 	got, err := manager.RequestBox("box_1")
 
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.NotNil(t, got)
 
 	t.Run("returns error for failing provider", func(t *testing.T) {
@@ -22,7 +22,7 @@ func TestBoxRequesting(t *testing.T) {
 
 		_, got := manager.RequestBox("box_1")
 
-		assert.AnError(t, got)
+		assert.NotNil(t, got)
 	})
 }
 
@@ -35,6 +35,23 @@ func TestBoxErasing(t *testing.T) {
 
 	err := manager.EraseBox("box_1")
 
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.Empty(t, provider.Boxes)
+}
+
+func TestCheckingForBox(t *testing.T) {
+
+	provider := &stubProvider{
+		Boxes: []*stubBox{{"box_1"}},
+	}
+	manager := NewManager(provider)
+
+	t.Run("returns true", func(t *testing.T) {
+		got := manager.ContainsBox("box_1")
+		assert.True(t, got)
+	})
+	t.Run("returns false", func(t *testing.T) {
+		got := manager.ContainsBox("box_2")
+		assert.False(t, got)
+	})
 }
