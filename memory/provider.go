@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrInvalidBoxIdentifier, "can't be empty")
 	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrInvalidBoxIdentifier, "repeated identifier")
 )
 
@@ -27,6 +28,9 @@ func (p *provider) contains(id string) bool {
 }
 
 func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
+	if id == "" {
+		return nil, ErrEmptyBoxIdentifier
+	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

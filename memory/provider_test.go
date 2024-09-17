@@ -18,6 +18,12 @@ func TestProvider_Create(t *testing.T) {
 	assert.NotNil(t, got)
 	assert.NotEmpty(t, p.(*provider).boxes)
 
+	t.Run("returns error for empty", func(t *testing.T) {
+		b, got := p.Create("")
+
+		assert.Nil(t, b)
+		assert.Error(t, got, ErrEmptyBoxIdentifier)
+	})
 	t.Run("returns error for the id duplicity", func(t *testing.T) {
 		b, got := p.Create("box_1")
 
