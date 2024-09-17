@@ -43,7 +43,7 @@ func TestBox_Post(t *testing.T) {
 
 		id, err := b.Post(nil)
 		assert.Nil(t, id)
-		assert.Error(t, err, mailbox.ErrNilContent)
+		assert.Error(t, err, mailbox.ErrPostingNilContent)
 	})
 }
 

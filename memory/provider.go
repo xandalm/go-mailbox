@@ -27,7 +27,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	defer p.mu.Unlock()
 
 	if p.contains(id) {
-		return nil, mailbox.ErrBoxIDDuplicity
+		return nil, mailbox.ErrRepeatedBoxIdentifier
 	}
 	b := newBox()
 	p.boxes[id] = b

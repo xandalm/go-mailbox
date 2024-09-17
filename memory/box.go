@@ -48,7 +48,7 @@ func (b *box) Get(k any) (any, mailbox.Error) {
 
 func (b *box) Post(c any) (any, mailbox.Error) {
 	if c == nil {
-		return nil, mailbox.ErrNilContent
+		return nil, mailbox.ErrPostingNilContent
 	}
 
 	b.mu.Lock()
