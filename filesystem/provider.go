@@ -87,3 +87,15 @@ func (p *provider) Delete(id string) mailbox.Error {
 	}
 	return nil
 }
+
+func (p *provider) List() ([]string, mailbox.Error) {
+	de, err := os.ReadDir(p.path)
+	if err != nil {
+		return nil, mailbox.ErrUnableToRestoreBox
+	}
+	ret := []string{}
+	for i := 0; i < len(de); i++ {
+		ret = append(ret, de[i].Name())
+	}
+	return ret, nil
+}

@@ -105,3 +105,27 @@ func TestProvider_Delete(t *testing.T) {
 		}
 	})
 }
+
+func TestProvider_List(t *testing.T) {
+	path := ""
+	dir := "Mailbox"
+	p := NewProvider(path, dir)
+
+	p.Create("box_1")
+	p.Create("box_2")
+
+	t.Run("return boxes id list", func(t *testing.T) {
+		got, err := p.List()
+
+		assert.Nil(t, err)
+		assert.NotNil(t, got)
+		assert.Contains(t, got, "box_1")
+		assert.Contains(t, got, "box_2")
+	})
+
+	t.Cleanup(func() {
+		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
+			log.Fatal("unable to remove residual data")
+		}
+	})
+}
