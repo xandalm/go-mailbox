@@ -7,30 +7,6 @@ import (
 	"github.com/xandalm/go-mailbox"
 )
 
-type box struct {
-	id string
-}
-
-// Clean implements mailbox.Box.
-func (b *box) Clean() mailbox.Error {
-	panic("unimplemented")
-}
-
-// Delete implements mailbox.Box.
-func (b *box) Delete(any) mailbox.Error {
-	panic("unimplemented")
-}
-
-// Get implements mailbox.Box.
-func (b *box) Get(any) (any, mailbox.Error) {
-	panic("unimplemented")
-}
-
-// Post implements mailbox.Box.
-func (b *box) Post(any) (any, mailbox.Error) {
-	panic("unimplemented")
-}
-
 var (
 	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
 	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "repeated identifier")
@@ -68,13 +44,13 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err := os.Mkdir(path, 0666); err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{id}
+	b := &box{p, id}
 	return b, nil
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	if _, err := os.Stat(join(p.path, id)); err == nil {
-		return &box{id}, nil
+		return &box{p, id}, nil
 	} else if os.IsNotExist(err) {
 		return nil, ErrBoxNotFound
 	}

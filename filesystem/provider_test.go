@@ -20,7 +20,7 @@ func TestProvider_Create(t *testing.T) {
 
 		assert.Nil(t, err, "expected nil but got %v", err)
 		assert.NotNil(t, got)
-		assert.Equal(t, *got.(*box), box{id: "box_1"})
+		assert.Equal(t, *got.(*box), box{p, "box_1"})
 
 		entry, osErr := os.ReadDir(filepath.Join(p.path))
 		if osErr != nil {
@@ -64,7 +64,7 @@ func TestProvider_Get(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
-		assert.Equal(t, *got.(*box), box{id: "box_1"})
+		assert.Equal(t, *got.(*box), box{p, "box_1"})
 	})
 
 	t.Run("return error because box doesn't exist", func(t *testing.T) {
