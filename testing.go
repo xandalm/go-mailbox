@@ -9,15 +9,15 @@ type stubBox struct {
 	Id string
 }
 
-func (s *stubBox) Post(any) (any, Error) {
+func (s *stubBox) Post(string, any) Error {
 	panic("unimplemented")
 }
 
-func (s *stubBox) Get(any) (any, Error) {
+func (s *stubBox) Get(string) (any, Error) {
 	panic("unimplemented")
 }
 
-func (s *stubBox) Delete(any) Error {
+func (s *stubBox) Delete(string) Error {
 	panic("unimplemented")
 }
 

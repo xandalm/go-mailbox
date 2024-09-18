@@ -36,11 +36,10 @@ func TestBox_Post(t *testing.T) {
 	createBoxFolder(t, b)
 
 	t.Run("post content and return its identifier", func(t *testing.T) {
-		got, err := b.Post("foo")
+		err := b.Post("1", "foo")
 
 		assert.Nil(t, err)
-		assert.NotNil(t, got)
-		assertContentFileIsCreated(t, b, got.(string))
+		assertContentFileIsCreated(t, b, "1")
 	})
 
 	t.Cleanup(func() {

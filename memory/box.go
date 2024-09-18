@@ -11,20 +11,14 @@ var (
 )
 
 type box struct {
-	pk       uint64
 	mu       sync.RWMutex
-	contents map[any]any
+	contents map[string]any
 }
 
 func newBox() *box {
 	return &box{
-		contents: make(map[any]any),
+		contents: make(map[string]any),
 	}
-}
-
-func (b *box) key() any {
-	b.pk++
-	return b.pk
 }
 
 func (b *box) Clean() mailbox.Error {
@@ -35,7 +29,7 @@ func (b *box) Clean() mailbox.Error {
 	return nil
 }
 
-func (b *box) Delete(k any) mailbox.Error {
+func (b *box) Delete(k string) mailbox.Error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -43,22 +37,21 @@ func (b *box) Delete(k any) mailbox.Error {
 	return nil
 }
 
-func (b *box) Get(k any) (any, mailbox.Error) {
+func (b *box) Get(k string) (any, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	return b.contents[k], nil
 }
 
-func (b *box) Post(c any) (any, mailbox.Error) {
+func (b *box) Post(id string, c any) mailbox.Error {
 	if c == nil {
-		return nil, ErrPostingNilContent
+		return ErrPostingNilContent
 	}
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	k := b.key()
-	b.contents[k] = c
-	return k, nil
+	b.contents[id] = c
+	return nil
 }

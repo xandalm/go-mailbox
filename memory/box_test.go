@@ -8,40 +8,38 @@ import (
 
 func TestBox_Post(t *testing.T) {
 
-	t.Run("post content and return its identifier", func(t *testing.T) {
+	t.Run("post content", func(t *testing.T) {
 		b := &box{
-			contents: map[any]any{},
+			contents: map[string]any{},
 		}
 
-		got, err := b.Post("lorem ipsum")
+		err := b.Post("1", "lorem ipsum")
 
 		assert.Nil(t, err)
-		assert.NotNil(t, got)
 
 		assert.NotEmpty(t, b.contents)
 	})
-	t.Run("don't repeat identifier", func(t *testing.T) {
-		b := &box{
-			contents: map[any]any{},
-		}
+	// t.Run("don't repeat identifier", func(t *testing.T) {
+	// 	b := &box{
+	// 		contents: map[any]any{},
+	// 	}
 
-		id1, err := b.Post("foo")
-		assert.Nil(t, err)
-		assert.NotEmpty(t, b.contents)
+	// 	id1, err := b.Post("foo")
+	// 	assert.Nil(t, err)
+	// 	assert.NotEmpty(t, b.contents)
 
-		id2, err := b.Post("bar")
-		assert.Nil(t, err)
-		assert.NotEmpty(t, b.contents)
+	// 	id2, err := b.Post("bar")
+	// 	assert.Nil(t, err)
+	// 	assert.NotEmpty(t, b.contents)
 
-		assert.NotEqual(t, id1, id2)
-	})
+	// 	assert.NotEqual(t, id1, id2)
+	// })
 	t.Run("returns error because nil content", func(t *testing.T) {
 		b := &box{
-			contents: map[any]any{},
+			contents: map[string]any{},
 		}
 
-		id, err := b.Post(nil)
-		assert.Nil(t, id)
+		err := b.Post("1", nil)
 		assert.Error(t, err, ErrPostingNilContent)
 	})
 }
@@ -49,10 +47,10 @@ func TestBox_Post(t *testing.T) {
 func TestBox_Get(t *testing.T) {
 	t.Run("returns the content by post identifier", func(t *testing.T) {
 		b := &box{
-			contents: map[any]any{1: "foo"},
+			contents: map[string]any{"1": "foo"},
 		}
 
-		got, err := b.Get(1)
+		got, err := b.Get("1")
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
@@ -70,10 +68,10 @@ func TestBox_Get(t *testing.T) {
 func TestBox_Delete(t *testing.T) {
 	t.Run("remove content", func(t *testing.T) {
 		b := &box{
-			contents: map[any]any{1: "foo"},
+			contents: map[string]any{"1": "foo"},
 		}
 
-		err := b.Delete(1)
+		err := b.Delete("1")
 
 		assert.Nil(t, err)
 		assert.Empty(t, b.contents)
@@ -83,7 +81,7 @@ func TestBox_Delete(t *testing.T) {
 func TestBox_Clean(t *testing.T) {
 	t.Run("remove all content", func(t *testing.T) {
 		b := &box{
-			contents: map[any]any{1: "foo", 2: "bar", 3: struct{ data any }{"foobarbaz"}},
+			contents: map[string]any{"1": "foo", "2": "bar", "3": struct{ data any }{"foobarbaz"}},
 		}
 
 		err := b.Clean()
