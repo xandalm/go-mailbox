@@ -37,13 +37,17 @@ var (
 	ErrBoxNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToRestoreBox, "not found")
 )
 
+func join(s ...string) string {
+	return filepath.Join(s...)
+}
+
 type provider struct {
 	path string
 }
 
 func NewProvider(path, dir string) *provider {
-	path = filepath.Join(path, dir)
-	err := os.MkdirAll(filepath.Join(path), 0666)
+	path = join(path, dir)
+	err := os.MkdirAll(path, 0666)
 	if err != nil && !os.IsExist(err) {
 		panic("unable to create provider")
 	}
@@ -55,7 +59,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
-	path := filepath.Join(p.path, id)
+	path := join(p.path, id)
 	if _, err := os.Stat(path); err == nil {
 		return nil, ErrRepeatedBoxIdentifier
 	} else if !os.IsNotExist(err) {
@@ -69,10 +73,17 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
-	if _, err := os.Stat(filepath.Join(p.path, id)); err == nil {
+	if _, err := os.Stat(join(p.path, id)); err == nil {
 		return &box{id}, nil
 	} else if os.IsNotExist(err) {
 		return nil, ErrBoxNotFound
 	}
 	return nil, mailbox.ErrUnableToRestoreBox
+}
+
+func (p *provider) Delete(id string) mailbox.Error {
+	if err := os.RemoveAll(join(p.path, id)); err != nil {
+		return mailbox.ErrUnableToDeleteBox
+	}
+	return nil
 }

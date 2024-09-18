@@ -80,3 +80,28 @@ func TestProvider_Get(t *testing.T) {
 		}
 	})
 }
+
+func TestProvider_Delete(t *testing.T) {
+	path := ""
+	dir := "Mailbox"
+	p := NewProvider(path, dir)
+
+	p.Create("box_1")
+
+	t.Run("delete box", func(t *testing.T) {
+		got := p.Delete("box_1")
+
+		assert.Nil(t, got)
+		if _, err := os.Stat(filepath.Join(path, dir, "box_1")); err == nil {
+			t.Error("didn't delete box folder")
+		} else if !os.IsNotExist(err) {
+			log.Fatal("unable to check box folder existence")
+		}
+	})
+
+	t.Cleanup(func() {
+		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
+			log.Fatal("unable to remove residual data")
+		}
+	})
+}
