@@ -8,6 +8,7 @@ import (
 )
 
 type box struct {
+	id string
 }
 
 // Clean implements mailbox.Box.
@@ -33,6 +34,7 @@ func (b *box) Post(any) (any, mailbox.Error) {
 var (
 	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
 	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "repeated identifier")
+	ErrBoxNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToRestoreBox, "not found")
 )
 
 type provider struct {
@@ -62,6 +64,15 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err := os.Mkdir(path, 0666); err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{}
+	b := &box{id}
 	return b, nil
+}
+
+func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
+	if _, err := os.Stat(filepath.Join(p.path, id)); err == nil {
+		return &box{id}, nil
+	} else if os.IsNotExist(err) {
+		return nil, ErrBoxNotFound
+	}
+	return nil, mailbox.ErrUnableToRestoreBox
 }
