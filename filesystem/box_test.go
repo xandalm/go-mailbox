@@ -23,7 +23,7 @@ func assertContentFileIsCreated(t *testing.T, b *box, id string) {
 		return
 	}
 	if os.IsNotExist(err) {
-		t.Fatal("didn't create box content file")
+		t.Fatalf("the box didn't have content with id=%q", id)
 		return
 	}
 	log.Fatal("unable to check if box content file is created")
@@ -35,11 +35,18 @@ func TestBox_Post(t *testing.T) {
 	b := &box{p, id}
 	createBoxFolder(t, b)
 
-	t.Run("post content and return its identifier", func(t *testing.T) {
+	t.Run("post content", func(t *testing.T) {
 		err := b.Post("1", "foo")
 
 		assert.Nil(t, err)
 		assertContentFileIsCreated(t, b, "1")
+	})
+
+	t.Run("returns error because id duplication", func(t *testing.T) {
+		assertContentFileIsCreated(t, b, "1")
+
+		err := b.Post("1", "bar")
+		assert.Error(t, err, ErrRepeatedContentIdentifier)
 	})
 
 	t.Cleanup(func() {

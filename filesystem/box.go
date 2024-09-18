@@ -6,6 +6,10 @@ import (
 	"github.com/xandalm/go-mailbox"
 )
 
+var (
+	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
+)
+
 type box struct {
 	p  *provider
 	id string
@@ -28,7 +32,13 @@ func (b *box) Get(string) (any, mailbox.Error) {
 
 // Post implements mailbox.Box.
 func (b *box) Post(id string, c any) mailbox.Error {
-	f, err := os.OpenFile(join(b.p.path, b.id, id), os.O_CREATE|os.O_RDWR, 0666)
+	filename := join(b.p.path, b.id, id)
+	if _, err := os.Stat(filename); err == nil {
+		return ErrRepeatedContentIdentifier
+	} else if !os.IsNotExist(err) {
+		return mailbox.ErrUnableToPostContent
+	}
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return mailbox.ErrUnableToPostContent
 	}
