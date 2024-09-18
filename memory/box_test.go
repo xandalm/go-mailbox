@@ -19,21 +19,14 @@ func TestBox_Post(t *testing.T) {
 
 		assert.NotEmpty(t, b.contents)
 	})
-	// t.Run("don't repeat identifier", func(t *testing.T) {
-	// 	b := &box{
-	// 		contents: map[any]any{},
-	// 	}
+	t.Run("returns error because id duplication", func(t *testing.T) {
+		b := &box{
+			contents: map[string]any{"1": "foo"},
+		}
 
-	// 	id1, err := b.Post("foo")
-	// 	assert.Nil(t, err)
-	// 	assert.NotEmpty(t, b.contents)
-
-	// 	id2, err := b.Post("bar")
-	// 	assert.Nil(t, err)
-	// 	assert.NotEmpty(t, b.contents)
-
-	// 	assert.NotEqual(t, id1, id2)
-	// })
+		err := b.Post("1", "bar")
+		assert.Error(t, err, ErrRepeatedContentIdentifier)
+	})
 	t.Run("returns error because nil content", func(t *testing.T) {
 		b := &box{
 			contents: map[string]any{},

@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	ErrPostingNilContent = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
+	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
+	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
 )
 
 type box struct {
@@ -51,6 +52,10 @@ func (b *box) Post(id string, c any) mailbox.Error {
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
+
+	if _, ok := b.contents[id]; ok {
+		return ErrRepeatedContentIdentifier
+	}
 
 	b.contents[id] = c
 	return nil
