@@ -49,6 +49,11 @@ func TestBox_Post(t *testing.T) {
 		assert.Error(t, err, ErrRepeatedContentIdentifier)
 	})
 
+	t.Run("returns error because nil content", func(t *testing.T) {
+		err := b.Post("2", nil)
+		assert.Error(t, err, ErrPostingNilContent)
+	})
+
 	t.Cleanup(func() {
 		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
 			log.Fatal("unable to remove residual data")

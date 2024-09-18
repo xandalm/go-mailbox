@@ -8,6 +8,7 @@ import (
 
 var (
 	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
+	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
 )
 
 type box struct {
@@ -32,6 +33,9 @@ func (b *box) Get(string) (any, mailbox.Error) {
 
 // Post implements mailbox.Box.
 func (b *box) Post(id string, c any) mailbox.Error {
+	if c == nil {
+		return ErrPostingNilContent
+	}
 	filename := join(b.p.path, b.id, id)
 	if _, err := os.Stat(filename); err == nil {
 		return ErrRepeatedContentIdentifier
