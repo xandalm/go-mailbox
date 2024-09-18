@@ -31,7 +31,8 @@ func (b *box) Post(any) (any, mailbox.Error) {
 }
 
 var (
-	ErrEmptyBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
+	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
+	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "repeated identifier")
 )
 
 type provider struct {
@@ -40,11 +41,11 @@ type provider struct {
 
 func NewProvider(path, dir string) *provider {
 	path = filepath.Join(path, dir)
-	p := &provider{path}
-	err := os.MkdirAll(filepath.Join(p.path), 0666)
+	err := os.MkdirAll(filepath.Join(path), 0666)
 	if err != nil && !os.IsExist(err) {
 		panic("unable to create provider")
 	}
+	p := &provider{path}
 	return p
 }
 
@@ -52,7 +53,15 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
+	path := filepath.Join(p.path, id)
+	if _, err := os.Stat(path); err == nil {
+		return nil, ErrRepeatedBoxIdentifier
+	} else if !os.IsNotExist(err) {
+		return nil, mailbox.ErrUnableToCreateBox
+	}
+	if err := os.Mkdir(path, 0666); err != nil {
+		return nil, mailbox.ErrUnableToCreateBox
+	}
 	b := &box{}
-	os.Mkdir(filepath.Join(p.path, id), 0666)
 	return b, nil
 }

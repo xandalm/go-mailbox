@@ -4,3 +4,5 @@ github.com/xandalm/go-testing v0.0.0-20240914153536-fbaa502fac8c h1:J1rM1ssi6xL4
 github.com/xandalm/go-testing v0.0.0-20240914153536-fbaa502fac8c/go.mod h1:a4iGzX59CePssy/cQXcNBQBCuX8+cFTU2EF1xCuoCdA=
 github.com/xandalm/go-testing v0.0.0-20240917181053-e8bd080c82cd h1:WP5Gk3w3s751qtL5q6fqJzb1URnWiauFtfBYND3l4MM=
 github.com/xandalm/go-testing v0.0.0-20240917181053-e8bd080c82cd/go.mod h1:a4iGzX59CePssy/cQXcNBQBCuX8+cFTU2EF1xCuoCdA=
+github.com/xandalm/go-testing v0.0.0-20240917203314-67dbb2a46135 h1:5olKvA3/Q3EXdKmdk108mqb/S+KoAh6rT/Wspp9ULVI=
+github.com/xandalm/go-testing v0.0.0-20240917203314-67dbb2a46135/go.mod h1:a4iGzX59CePssy/cQXcNBQBCuX8+cFTU2EF1xCuoCdA=
