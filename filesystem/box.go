@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"io"
 	"os"
 
 	"github.com/xandalm/go-mailbox"
@@ -27,8 +28,12 @@ func (b *box) Delete(string) mailbox.Error {
 }
 
 // Get implements mailbox.Box.
-func (b *box) Get(string) (any, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) Get(id string) (any, mailbox.Error) {
+	filename := join(b.p.path, b.id, id)
+	f, _ := os.Open(filename)
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	return string(data), nil
 }
 
 // Post implements mailbox.Box.
