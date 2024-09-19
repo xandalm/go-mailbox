@@ -11,10 +11,13 @@ import (
 var (
 	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
 	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
+	ErrContentNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToReadContent, "not found")
 
 	errFileAlreadyExists = errors.New("file already exists")
+	errFileNotExist      = errors.New("file not exists")
 	errUnableToCheckFile = errors.New("unable to check file")
 	errUnableToWriteFile = errors.New("unable to write file")
+	errUnableToReadFile  = errors.New("unable to read file")
 )
 
 type Bytes = mailbox.Bytes
@@ -27,10 +30,18 @@ type rw interface {
 type rwImpl struct{}
 
 func (s *rwImpl) Read(name string) ([]byte, error) {
-	f, _ := os.Open(name)
+	f, err := os.Open(name)
+	if os.IsNotExist(err) {
+		return nil, errFileNotExist
+	}
+	if err != nil {
+		return nil, errUnableToReadFile
+	}
 	defer f.Close()
-	data, _ := io.ReadAll(f)
-	return data, nil
+	if data, err := io.ReadAll(f); err == nil {
+		return data, nil
+	}
+	return nil, errUnableToReadFile
 }
 
 func (s rwImpl) Write(name string, data []byte) error {
@@ -44,7 +55,9 @@ func (s rwImpl) Write(name string, data []byte) error {
 		return errUnableToWriteFile
 	}
 	defer f.Close()
-	f.Write(data)
+	if _, err := f.Write(data); err != nil {
+		return errUnableToWriteFile
+	}
 	return nil
 }
 
@@ -67,8 +80,16 @@ func (b *box) Delete(string) mailbox.Error {
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (Bytes, mailbox.Error) {
 	filename := join(b.p.path, b.id, id)
-	data, _ := b.s.Read(filename)
-	return data, nil
+	data, err := b.s.Read(filename)
+	if err == nil {
+		return data, nil
+	}
+	switch err {
+	case errFileNotExist:
+		return nil, ErrContentNotFound
+	default:
+		return nil, mailbox.ErrUnableToReadContent
+	}
 }
 
 // Post implements mailbox.Box.

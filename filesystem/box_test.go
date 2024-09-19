@@ -1,12 +1,14 @@
 package filesystem
 
 import (
+	"errors"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -88,6 +90,13 @@ func TestBox_Post(t *testing.T) {
 		assert.Error(t, err, ErrPostingNilContent)
 	})
 
+	t.Run("returns error because unexpected condition", func(t *testing.T) {
+		b.s = &stubFailingRW{}
+
+		err := b.Post("2", Bytes("bar"))
+		assert.Error(t, err, mailbox.ErrUnableToPostContent)
+	})
+
 	t.Cleanup(func() {
 		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
 			log.Fatal("unable to remove residual data")
@@ -111,9 +120,35 @@ func TestBox_Get(t *testing.T) {
 		assert.Equal(t, got, Bytes("foo"))
 	})
 
+	t.Run("returns error because post file don't exist", func(t *testing.T) {
+		data, err := b.Get("2")
+
+		assert.Nil(t, data)
+		assert.Error(t, err, ErrContentNotFound)
+	})
+
+	t.Run("returns error because unexpected condition", func(t *testing.T) {
+		b.s = &stubFailingRW{}
+
+		_, err := b.Get("1")
+		assert.Error(t, err, mailbox.ErrUnableToReadContent)
+	})
+
 	t.Cleanup(func() {
 		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
 			log.Fatal("unable to remove residual data")
 		}
 	})
+}
+
+var errFoo = errors.New("some error")
+
+type stubFailingRW struct{}
+
+func (rw *stubFailingRW) Read(name string) ([]byte, error) {
+	return nil, errFoo
+}
+
+func (rw *stubFailingRW) Write(name string, data []byte) error {
+	return errFoo
 }
