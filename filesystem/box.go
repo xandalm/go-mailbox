@@ -13,25 +13,28 @@ var (
 	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
 	ErrContentNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToReadContent, "not found")
 
-	errFileAlreadyExists  = errors.New("file already exists")
-	errFileNotExist       = errors.New("file not exists")
-	errUnableToCheckFile  = errors.New("unable to check file")
-	errUnableToWriteFile  = errors.New("unable to write file")
-	errUnableToReadFile   = errors.New("unable to read file")
-	errUnableToDeleteFile = errors.New("unable to delete file")
+	errFileAlreadyExists   = errors.New("file already exists")
+	errFileNotExist        = errors.New("file not exists")
+	errUnableToCheckFile   = errors.New("unable to check file")
+	errUnableToWriteFile   = errors.New("unable to write file")
+	errUnableToReadFile    = errors.New("unable to read file")
+	errUnableToDeleteFile  = errors.New("unable to delete file")
+	errUnableToCleanFolder = errors.New("unable to clean folder files")
 )
 
 type Bytes = mailbox.Bytes
 
 type fsHandler interface {
-	Read(string) ([]byte, error)
-	Write(string, []byte) error
-	Delete(string) error
+	Read(string, string) ([]byte, error)
+	Write(string, string, []byte) error
+	Delete(string, string) error
+	Clean(string) error
 }
 
 type fsHandlerImpl struct{}
 
-func (fs *fsHandlerImpl) Read(name string) ([]byte, error) {
+func (fs *fsHandlerImpl) Read(path, id string) ([]byte, error) {
+	name := join(path, id)
 	f, err := os.Open(name)
 	if os.IsNotExist(err) {
 		return nil, errFileNotExist
@@ -46,7 +49,8 @@ func (fs *fsHandlerImpl) Read(name string) ([]byte, error) {
 	return nil, errUnableToReadFile
 }
 
-func (fs *fsHandlerImpl) Write(name string, data []byte) error {
+func (fs *fsHandlerImpl) Write(path, id string, data []byte) error {
+	name := join(path, id)
 	if _, err := os.Stat(name); err == nil {
 		return errFileAlreadyExists
 	} else if !os.IsNotExist(err) {
@@ -63,31 +67,46 @@ func (fs *fsHandlerImpl) Write(name string, data []byte) error {
 	return nil
 }
 
-func (fs *fsHandlerImpl) Delete(name string) error {
+func (fs *fsHandlerImpl) Delete(path, id string) error {
+	name := join(path, id)
 	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
 		return errUnableToDeleteFile
 	}
 	return nil
 }
 
+func (fs *fsHandlerImpl) Clean(path string) error {
+	dirEntry, err := os.ReadDir(path)
+	if err != nil {
+		return errUnableToCleanFolder
+	}
+	for _, e := range dirEntry {
+		os.Remove(join(path, e.Name()))
+	}
+	return nil
+}
+
 type box struct {
-	s  fsHandler
+	fs fsHandler
 	p  *provider
 	id string
 }
 
-func (b *box) filename(id string) string {
-	return join(b.p.path, b.id, id)
+func (b *box) path() string {
+	return join(b.p.path, b.id)
 }
 
 // Clean implements mailbox.Box.
 func (b *box) Clean() mailbox.Error {
-	panic("unimplemented")
+	if err := b.fs.Clean(b.path()); err != nil {
+		return mailbox.ErrUnableToCleanBox
+	}
+	return nil
 }
 
 // Delete implements mailbox.Box.
 func (b *box) Delete(id string) mailbox.Error {
-	if err := b.s.Delete(b.filename(id)); err != nil {
+	if err := b.fs.Delete(b.path(), id); err != nil {
 		return mailbox.ErrUnableToDeleteContent
 	}
 	return nil
@@ -95,7 +114,7 @@ func (b *box) Delete(id string) mailbox.Error {
 
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (Bytes, mailbox.Error) {
-	data, err := b.s.Read(b.filename(id))
+	data, err := b.fs.Read(b.path(), id)
 	if err == nil {
 		return data, nil
 	}
@@ -112,7 +131,7 @@ func (b *box) Post(id string, c Bytes) mailbox.Error {
 	if c == nil {
 		return ErrPostingNilContent
 	}
-	err := b.s.Write(b.filename(id), c)
+	err := b.fs.Write(b.path(), id, c)
 	if err == nil {
 		return nil
 	}
