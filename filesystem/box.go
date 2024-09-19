@@ -25,11 +25,12 @@ type Bytes = mailbox.Bytes
 type rw interface {
 	Read(string) ([]byte, error)
 	Write(string, []byte) error
+	Delete(string) error
 }
 
 type rwImpl struct{}
 
-func (s *rwImpl) Read(name string) ([]byte, error) {
+func (rw *rwImpl) Read(name string) ([]byte, error) {
 	f, err := os.Open(name)
 	if os.IsNotExist(err) {
 		return nil, errFileNotExist
@@ -44,7 +45,7 @@ func (s *rwImpl) Read(name string) ([]byte, error) {
 	return nil, errUnableToReadFile
 }
 
-func (s rwImpl) Write(name string, data []byte) error {
+func (rw *rwImpl) Write(name string, data []byte) error {
 	if _, err := os.Stat(name); err == nil {
 		return errFileAlreadyExists
 	} else if !os.IsNotExist(err) {
@@ -61,10 +62,19 @@ func (s rwImpl) Write(name string, data []byte) error {
 	return nil
 }
 
+func (s *rwImpl) Delete(name string) error {
+	os.Remove(name)
+	return nil
+}
+
 type box struct {
 	s  rw
 	p  *provider
 	id string
+}
+
+func (b *box) filename(id string) string {
+	return join(b.p.path, b.id, id)
 }
 
 // Clean implements mailbox.Box.
@@ -73,14 +83,14 @@ func (b *box) Clean() mailbox.Error {
 }
 
 // Delete implements mailbox.Box.
-func (b *box) Delete(string) mailbox.Error {
-	panic("unimplemented")
+func (b *box) Delete(id string) mailbox.Error {
+	b.s.Delete(b.filename(id))
+	return nil
 }
 
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (Bytes, mailbox.Error) {
-	filename := join(b.p.path, b.id, id)
-	data, err := b.s.Read(filename)
+	data, err := b.s.Read(b.filename(id))
 	if err == nil {
 		return data, nil
 	}
@@ -97,8 +107,7 @@ func (b *box) Post(id string, c Bytes) mailbox.Error {
 	if c == nil {
 		return ErrPostingNilContent
 	}
-	filename := join(b.p.path, b.id, id)
-	err := b.s.Write(filename, c)
+	err := b.s.Write(b.filename(id), c)
 	if err == nil {
 		return nil
 	}

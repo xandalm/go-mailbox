@@ -12,6 +12,22 @@ import (
 	"github.com/xandalm/go-testing/assert"
 )
 
+var errFoo = errors.New("some error")
+
+type stubFailingRW struct{}
+
+func (rw *stubFailingRW) Read(name string) ([]byte, error) {
+	return nil, errFoo
+}
+
+func (rw *stubFailingRW) Write(name string, data []byte) error {
+	return errFoo
+}
+
+func (rw *stubFailingRW) Delete(name string) error {
+	return errFoo
+}
+
 func createBoxFolder(t *testing.T, b *box) {
 	if err := os.MkdirAll(filepath.Join(b.p.path, b.id), 0666); err != nil {
 		t.Errorf("unable to create box folder, %v", err)
@@ -46,6 +62,14 @@ func assertContentFileIsCreated(t *testing.T, b *box, id string) {
 
 	if !isContentFileCreated(b, id) {
 		t.Fatalf("the box folder didn't have content file with id=%q", id)
+	}
+}
+
+func assertContentFileNotExists(t *testing.T, b *box, id string) {
+	t.Helper()
+
+	if isContentFileCreated(b, id) {
+		t.Fatalf("the box folder has the content file with id=%q", id)
 	}
 }
 
@@ -141,14 +165,23 @@ func TestBox_Get(t *testing.T) {
 	})
 }
 
-var errFoo = errors.New("some error")
+func TestBox_Delete(t *testing.T) {
+	id := "box_1"
+	p := &provider{"Mailbox"}
+	b := &box{&rwImpl{}, p, id}
+	createBoxFolder(t, b)
+	createBoxContentFile(t, b, "1", Bytes("foo"))
 
-type stubFailingRW struct{}
+	t.Run("delete content", func(t *testing.T) {
+		err := b.Delete("1")
 
-func (rw *stubFailingRW) Read(name string) ([]byte, error) {
-	return nil, errFoo
-}
+		assert.Nil(t, err)
+		assertContentFileNotExists(t, b, "1")
+	})
 
-func (rw *stubFailingRW) Write(name string, data []byte) error {
-	return errFoo
+	t.Cleanup(func() {
+		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
+			log.Fatal("unable to remove residual data")
+		}
+	})
 }
