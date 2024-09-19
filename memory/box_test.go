@@ -9,15 +9,17 @@ import (
 func TestBox_Post(t *testing.T) {
 
 	t.Run("post content", func(t *testing.T) {
+		content := Bytes("lorem ipsum")
 		b := &box{
 			contents: map[string]Bytes{},
 		}
 
-		err := b.Post("1", Bytes("lorem ipsum"))
+		err := b.Post("1", content)
 
 		assert.Nil(t, err)
 
 		assert.NotEmpty(t, b.contents)
+		assert.Equal(t, b.contents["1"], content)
 	})
 	t.Run("returns error because id duplication", func(t *testing.T) {
 		b := &box{
