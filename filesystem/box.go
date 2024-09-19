@@ -23,15 +23,15 @@ var (
 
 type Bytes = mailbox.Bytes
 
-type rw interface {
+type fsHandler interface {
 	Read(string) ([]byte, error)
 	Write(string, []byte) error
 	Delete(string) error
 }
 
-type rwImpl struct{}
+type fsHandlerImpl struct{}
 
-func (rw *rwImpl) Read(name string) ([]byte, error) {
+func (fs *fsHandlerImpl) Read(name string) ([]byte, error) {
 	f, err := os.Open(name)
 	if os.IsNotExist(err) {
 		return nil, errFileNotExist
@@ -46,7 +46,7 @@ func (rw *rwImpl) Read(name string) ([]byte, error) {
 	return nil, errUnableToReadFile
 }
 
-func (rw *rwImpl) Write(name string, data []byte) error {
+func (fs *fsHandlerImpl) Write(name string, data []byte) error {
 	if _, err := os.Stat(name); err == nil {
 		return errFileAlreadyExists
 	} else if !os.IsNotExist(err) {
@@ -63,7 +63,7 @@ func (rw *rwImpl) Write(name string, data []byte) error {
 	return nil
 }
 
-func (s *rwImpl) Delete(name string) error {
+func (fs *fsHandlerImpl) Delete(name string) error {
 	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
 		return errUnableToDeleteFile
 	}
@@ -71,7 +71,7 @@ func (s *rwImpl) Delete(name string) error {
 }
 
 type box struct {
-	s  rw
+	s  fsHandler
 	p  *provider
 	id string
 }

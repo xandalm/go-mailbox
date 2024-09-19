@@ -14,17 +14,17 @@ import (
 
 var errFoo = errors.New("some error")
 
-type stubFailingRW struct{}
+type stubFailingFsHandler struct{}
 
-func (rw *stubFailingRW) Read(name string) ([]byte, error) {
+func (rw *stubFailingFsHandler) Read(name string) ([]byte, error) {
 	return nil, errFoo
 }
 
-func (rw *stubFailingRW) Write(name string, data []byte) error {
+func (rw *stubFailingFsHandler) Write(name string, data []byte) error {
 	return errFoo
 }
 
-func (rw *stubFailingRW) Delete(name string) error {
+func (rw *stubFailingFsHandler) Delete(name string) error {
 	return errFoo
 }
 
@@ -91,7 +91,7 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 func TestBox_Post(t *testing.T) {
 	id := "box_1"
 	p := &provider{"Mailbox"}
-	b := &box{&rwImpl{}, p, id}
+	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 
 	t.Run("post content", func(t *testing.T) {
@@ -115,7 +115,7 @@ func TestBox_Post(t *testing.T) {
 	})
 
 	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		b.s = &stubFailingRW{}
+		b.s = &stubFailingFsHandler{}
 
 		err := b.Post("2", Bytes("bar"))
 		assert.Error(t, err, mailbox.ErrUnableToPostContent)
@@ -131,7 +131,7 @@ func TestBox_Post(t *testing.T) {
 func TestBox_Get(t *testing.T) {
 	id := "box_1"
 	p := &provider{"Mailbox"}
-	b := &box{&rwImpl{}, p, id}
+	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 	createBoxContentFile(t, b, "1", Bytes("foo"))
 
@@ -152,7 +152,7 @@ func TestBox_Get(t *testing.T) {
 	})
 
 	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		b.s = &stubFailingRW{}
+		b.s = &stubFailingFsHandler{}
 
 		_, err := b.Get("1")
 		assert.Error(t, err, mailbox.ErrUnableToReadContent)
@@ -168,7 +168,7 @@ func TestBox_Get(t *testing.T) {
 func TestBox_Delete(t *testing.T) {
 	id := "box_1"
 	p := &provider{"Mailbox"}
-	b := &box{&rwImpl{}, p, id}
+	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 	createBoxContentFile(t, b, "1", Bytes("foo"))
 
@@ -181,7 +181,7 @@ func TestBox_Delete(t *testing.T) {
 
 	t.Run("returns error because unexpected condition", func(t *testing.T) {
 		createBoxContentFile(t, b, "1", Bytes("foo"))
-		b.s = &stubFailingRW{}
+		b.s = &stubFailingFsHandler{}
 		err := b.Delete("1")
 
 		assert.Error(t, err, mailbox.ErrUnableToDeleteContent)
@@ -189,7 +189,7 @@ func TestBox_Delete(t *testing.T) {
 	})
 
 	t.Run("do nothing on not found content", func(t *testing.T) {
-		b.s = &rwImpl{}
+		b.s = &fsHandlerImpl{}
 		err := b.Delete("2")
 
 		assert.Nil(t, err)
