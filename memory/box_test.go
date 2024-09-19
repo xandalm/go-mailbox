@@ -10,10 +10,10 @@ func TestBox_Post(t *testing.T) {
 
 	t.Run("post content", func(t *testing.T) {
 		b := &box{
-			contents: map[string]any{},
+			contents: map[string]Bytes{},
 		}
 
-		err := b.Post("1", "lorem ipsum")
+		err := b.Post("1", Bytes("lorem ipsum"))
 
 		assert.Nil(t, err)
 
@@ -21,15 +21,15 @@ func TestBox_Post(t *testing.T) {
 	})
 	t.Run("returns error because id duplication", func(t *testing.T) {
 		b := &box{
-			contents: map[string]any{"1": "foo"},
+			contents: map[string]Bytes{"1": Bytes("foo")},
 		}
 
-		err := b.Post("1", "bar")
+		err := b.Post("1", Bytes("bar"))
 		assert.Error(t, err, ErrRepeatedContentIdentifier)
 	})
 	t.Run("returns error because nil content", func(t *testing.T) {
 		b := &box{
-			contents: map[string]any{},
+			contents: map[string]Bytes{},
 		}
 
 		err := b.Post("1", nil)
@@ -39,8 +39,9 @@ func TestBox_Post(t *testing.T) {
 
 func TestBox_Get(t *testing.T) {
 	t.Run("returns the content by post identifier", func(t *testing.T) {
+		content := Bytes("foo")
 		b := &box{
-			contents: map[string]any{"1": "foo"},
+			contents: map[string]Bytes{"1": content},
 		}
 
 		got, err := b.Get("1")
@@ -48,20 +49,15 @@ func TestBox_Get(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
 
-		content, ok := got.(string)
-
-		if !ok {
-			t.Fatal("didn't get the expected content type")
-		}
-
-		assert.Equal(t, content, "foo")
+		assert.Equal(t, got, content)
 	})
 }
 
 func TestBox_Delete(t *testing.T) {
 	t.Run("remove content", func(t *testing.T) {
+		content := Bytes("foo")
 		b := &box{
-			contents: map[string]any{"1": "foo"},
+			contents: map[string]Bytes{"1": content},
 		}
 
 		err := b.Delete("1")
@@ -74,7 +70,11 @@ func TestBox_Delete(t *testing.T) {
 func TestBox_Clean(t *testing.T) {
 	t.Run("remove all content", func(t *testing.T) {
 		b := &box{
-			contents: map[string]any{"1": "foo", "2": "bar", "3": struct{ data any }{"foobarbaz"}},
+			contents: map[string]Bytes{
+				"1": Bytes("foo"),
+				"2": Bytes("bar"),
+				"3": Bytes("baz"),
+			},
 		}
 
 		err := b.Clean()

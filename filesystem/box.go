@@ -12,6 +12,8 @@ var (
 	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
 )
 
+type Bytes = mailbox.Bytes
+
 type box struct {
 	p  *provider
 	id string
@@ -28,16 +30,16 @@ func (b *box) Delete(string) mailbox.Error {
 }
 
 // Get implements mailbox.Box.
-func (b *box) Get(id string) (any, mailbox.Error) {
+func (b *box) Get(id string) (Bytes, mailbox.Error) {
 	filename := join(b.p.path, b.id, id)
 	f, _ := os.Open(filename)
 	defer f.Close()
 	data, _ := io.ReadAll(f)
-	return string(data), nil
+	return data, nil
 }
 
 // Post implements mailbox.Box.
-func (b *box) Post(id string, c any) mailbox.Error {
+func (b *box) Post(id string, c Bytes) mailbox.Error {
 	if c == nil {
 		return ErrPostingNilContent
 	}
@@ -52,5 +54,6 @@ func (b *box) Post(id string, c any) mailbox.Error {
 		return mailbox.ErrUnableToPostContent
 	}
 	defer f.Close()
+	f.Write(c)
 	return nil
 }

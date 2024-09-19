@@ -78,11 +78,13 @@ type Provider interface {
 	List() ([]string, Error)
 }
 
+type Bytes []byte
+
 type Box interface {
 	// Post content and return its identifier.
-	Post(string, any) Error
+	Post(string, Bytes) Error
 	// Read the content matching to the identifier.
-	Get(string) (any, Error)
+	Get(string) (Bytes, Error)
 	// Remove the content matching to the identifier.
 	Delete(string) Error
 	// Remove all its existing contents.

@@ -16,14 +16,14 @@ func createBoxFolder(t *testing.T, b *box) {
 	}
 }
 
-func createBoxContentFile(t *testing.T, b *box, id, content string) {
+func createBoxContentFile(t *testing.T, b *box, id string, content Bytes) {
 	filename := filepath.Join(b.p.path, b.id, id)
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		t.Errorf("unable to create box content file, %v", err)
 	}
 	defer f.Close()
-	f.Write([]byte(content))
+	f.Write(content)
 }
 
 func isContentFileCreated(b *box, id string) bool {
@@ -47,7 +47,7 @@ func assertContentFileIsCreated(t *testing.T, b *box, id string) {
 	}
 }
 
-func assertContentFileHasData(t *testing.T, b *box, id string, content string) {
+func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 	t.Helper()
 
 	if !isContentFileCreated(b, id) {
@@ -59,7 +59,7 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content string) {
 	}
 	defer f.Close()
 	data, _ := io.ReadAll(f)
-	assert.Equal(t, string(data), content)
+	assert.Equal(t, data, content)
 }
 
 func TestBox_Post(t *testing.T) {
@@ -69,16 +69,17 @@ func TestBox_Post(t *testing.T) {
 	createBoxFolder(t, b)
 
 	t.Run("post content", func(t *testing.T) {
-		err := b.Post("1", "foo")
+		content := Bytes("foo")
+		err := b.Post("1", content)
 
 		assert.Nil(t, err)
-		assertContentFileHasData(t, b, "1", "foo")
+		assertContentFileHasData(t, b, "1", content)
 	})
 
 	t.Run("returns error because id duplication", func(t *testing.T) {
 		assertContentFileIsCreated(t, b, "1")
 
-		err := b.Post("1", "bar")
+		err := b.Post("1", Bytes("bar"))
 		assert.Error(t, err, ErrRepeatedContentIdentifier)
 	})
 
@@ -99,7 +100,7 @@ func TestBox_Get(t *testing.T) {
 	p := &provider{"Mailbox"}
 	b := &box{p, id}
 	createBoxFolder(t, b)
-	createBoxContentFile(t, b, "1", "foo")
+	createBoxContentFile(t, b, "1", Bytes("foo"))
 
 	t.Run("returns the content by post identifier", func(t *testing.T) {
 		got, err := b.Get("1")
@@ -107,13 +108,7 @@ func TestBox_Get(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
 
-		content, ok := got.(string)
-
-		if !ok {
-			t.Fatal("didn't get the expected content type")
-		}
-
-		assert.Equal(t, content, "foo")
+		assert.Equal(t, got, Bytes("foo"))
 	})
 
 	t.Cleanup(func() {

@@ -11,14 +11,16 @@ var (
 	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
 )
 
+type Bytes = mailbox.Bytes
+
 type box struct {
 	mu       sync.RWMutex
-	contents map[string]any
+	contents map[string]Bytes
 }
 
 func newBox() *box {
 	return &box{
-		contents: make(map[string]any),
+		contents: make(map[string]Bytes),
 	}
 }
 
@@ -38,14 +40,14 @@ func (b *box) Delete(k string) mailbox.Error {
 	return nil
 }
 
-func (b *box) Get(k string) (any, mailbox.Error) {
+func (b *box) Get(k string) (Bytes, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	return b.contents[k], nil
 }
 
-func (b *box) Post(id string, c any) mailbox.Error {
+func (b *box) Post(id string, c Bytes) mailbox.Error {
 	if c == nil {
 		return ErrPostingNilContent
 	}
