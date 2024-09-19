@@ -57,7 +57,7 @@ func isContentFileCreated(b *box, id string) bool {
 	return false
 }
 
-func assertContentFileIsCreated(t *testing.T, b *box, id string) {
+func assertContentFileExists(t *testing.T, b *box, id string) {
 	t.Helper()
 
 	if !isContentFileCreated(b, id) {
@@ -103,7 +103,7 @@ func TestBox_Post(t *testing.T) {
 	})
 
 	t.Run("returns error because id duplication", func(t *testing.T) {
-		assertContentFileIsCreated(t, b, "1")
+		assertContentFileExists(t, b, "1")
 
 		err := b.Post("1", Bytes("bar"))
 		assert.Error(t, err, ErrRepeatedContentIdentifier)
@@ -177,6 +177,23 @@ func TestBox_Delete(t *testing.T) {
 
 		assert.Nil(t, err)
 		assertContentFileNotExists(t, b, "1")
+	})
+
+	t.Run("returns error because unexpected condition", func(t *testing.T) {
+		createBoxContentFile(t, b, "1", Bytes("foo"))
+		b.s = &stubFailingRW{}
+		err := b.Delete("1")
+
+		assert.Error(t, err, mailbox.ErrUnableToDeleteContent)
+		assertContentFileExists(t, b, "1")
+	})
+
+	t.Run("do nothing on not found content", func(t *testing.T) {
+		b.s = &rwImpl{}
+		err := b.Delete("2")
+
+		assert.Nil(t, err)
+		assertContentFileNotExists(t, b, "2")
 	})
 
 	t.Cleanup(func() {

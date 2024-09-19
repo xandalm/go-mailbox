@@ -13,11 +13,12 @@ var (
 	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
 	ErrContentNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToReadContent, "not found")
 
-	errFileAlreadyExists = errors.New("file already exists")
-	errFileNotExist      = errors.New("file not exists")
-	errUnableToCheckFile = errors.New("unable to check file")
-	errUnableToWriteFile = errors.New("unable to write file")
-	errUnableToReadFile  = errors.New("unable to read file")
+	errFileAlreadyExists  = errors.New("file already exists")
+	errFileNotExist       = errors.New("file not exists")
+	errUnableToCheckFile  = errors.New("unable to check file")
+	errUnableToWriteFile  = errors.New("unable to write file")
+	errUnableToReadFile   = errors.New("unable to read file")
+	errUnableToDeleteFile = errors.New("unable to delete file")
 )
 
 type Bytes = mailbox.Bytes
@@ -63,7 +64,9 @@ func (rw *rwImpl) Write(name string, data []byte) error {
 }
 
 func (s *rwImpl) Delete(name string) error {
-	os.Remove(name)
+	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
+		return errUnableToDeleteFile
+	}
 	return nil
 }
 
@@ -84,7 +87,9 @@ func (b *box) Clean() mailbox.Error {
 
 // Delete implements mailbox.Box.
 func (b *box) Delete(id string) mailbox.Error {
-	b.s.Delete(b.filename(id))
+	if err := b.s.Delete(b.filename(id)); err != nil {
+		return mailbox.ErrUnableToDeleteContent
+	}
 	return nil
 }
 

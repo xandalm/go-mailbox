@@ -53,6 +53,7 @@ var (
 	ErrUnableToDeleteBox     Error = newError("unable to delete the box")
 	ErrUnableToPostContent   Error = newError("unable to post content")
 	ErrUnableToReadContent   Error = newError("unable to read content")
+	ErrUnableToDeleteContent Error = newError("unable to delete content")
 	ErrUnableCleanBoxContent Error = newError("unable to clear box contents")
 
 	ErrUnknownBox Error = newError("there's no such box")
