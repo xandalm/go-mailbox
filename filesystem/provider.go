@@ -44,13 +44,13 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err := os.Mkdir(path, 0666); err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{p, id}
+	b := &box{&rwImpl{}, p, id}
 	return b, nil
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	if _, err := os.Stat(join(p.path, id)); err == nil {
-		return &box{p, id}, nil
+		return &box{&rwImpl{}, p, id}, nil
 	} else if os.IsNotExist(err) {
 		return nil, ErrBoxNotFound
 	}

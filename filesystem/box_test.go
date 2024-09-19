@@ -65,7 +65,7 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 func TestBox_Post(t *testing.T) {
 	id := "box_1"
 	p := &provider{"Mailbox"}
-	b := &box{p, id}
+	b := &box{&rwImpl{}, p, id}
 	createBoxFolder(t, b)
 
 	t.Run("post content", func(t *testing.T) {
@@ -98,7 +98,7 @@ func TestBox_Post(t *testing.T) {
 func TestBox_Get(t *testing.T) {
 	id := "box_1"
 	p := &provider{"Mailbox"}
-	b := &box{p, id}
+	b := &box{&rwImpl{}, p, id}
 	createBoxFolder(t, b)
 	createBoxContentFile(t, b, "1", Bytes("foo"))
 

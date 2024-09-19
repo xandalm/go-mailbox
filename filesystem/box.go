@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"io"
 	"os"
 
@@ -10,11 +11,45 @@ import (
 var (
 	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
 	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
+
+	errFileAlreadyExists = errors.New("file already exists")
+	errUnableToCheckFile = errors.New("unable to check file")
+	errUnableToWriteFile = errors.New("unable to write file")
 )
 
 type Bytes = mailbox.Bytes
 
+type rw interface {
+	Read(string) ([]byte, error)
+	Write(string, []byte) error
+}
+
+type rwImpl struct{}
+
+func (s *rwImpl) Read(name string) ([]byte, error) {
+	f, _ := os.Open(name)
+	defer f.Close()
+	data, _ := io.ReadAll(f)
+	return data, nil
+}
+
+func (s rwImpl) Write(name string, data []byte) error {
+	if _, err := os.Stat(name); err == nil {
+		return errFileAlreadyExists
+	} else if !os.IsNotExist(err) {
+		return errUnableToCheckFile
+	}
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		return errUnableToWriteFile
+	}
+	defer f.Close()
+	f.Write(data)
+	return nil
+}
+
 type box struct {
+	s  rw
 	p  *provider
 	id string
 }
@@ -32,9 +67,7 @@ func (b *box) Delete(string) mailbox.Error {
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (Bytes, mailbox.Error) {
 	filename := join(b.p.path, b.id, id)
-	f, _ := os.Open(filename)
-	defer f.Close()
-	data, _ := io.ReadAll(f)
+	data, _ := b.s.Read(filename)
 	return data, nil
 }
 
@@ -44,16 +77,14 @@ func (b *box) Post(id string, c Bytes) mailbox.Error {
 		return ErrPostingNilContent
 	}
 	filename := join(b.p.path, b.id, id)
-	if _, err := os.Stat(filename); err == nil {
+	err := b.s.Write(filename, c)
+	if err == nil {
+		return nil
+	}
+	switch err {
+	case errFileAlreadyExists:
 		return ErrRepeatedContentIdentifier
-	} else if !os.IsNotExist(err) {
+	default:
 		return mailbox.ErrUnableToPostContent
 	}
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		return mailbox.ErrUnableToPostContent
-	}
-	defer f.Close()
-	f.Write(c)
-	return nil
 }
