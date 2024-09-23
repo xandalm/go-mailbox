@@ -89,7 +89,7 @@ type Storage interface {
 	// Create box container
 	CreateBox(string) Error
 	// Check box container existence
-	List() ([]string, Error)
+	ListBoxes() ([]string, Error)
 	// Delete box container
 	DeleteBox(string) Error
 	// Remove all content from box container
@@ -134,7 +134,7 @@ type provider struct {
 }
 
 func NewProvider(st Storage) Provider {
-	known, err := st.List()
+	known, err := st.ListBoxes()
 	slices.Sort(known)
 	if err != nil {
 		panic("mailbox: unable to load")

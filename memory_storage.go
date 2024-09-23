@@ -2,9 +2,11 @@ package mailbox
 
 import "sync"
 
+type memoryStorageBox struct{}
+
 type MemoryStorage struct {
 	mu    sync.RWMutex
-	boxes map[string]struct{}
+	boxes map[string]memoryStorageBox
 }
 
 func (m *MemoryStorage) CreateBox(id string) Error {
@@ -15,12 +17,24 @@ func (m *MemoryStorage) CreateBox(id string) Error {
 		return ErrRepeatedBoxIdentifier
 	}
 
-	m.boxes[id] = struct{}{}
+	m.boxes[id] = memoryStorageBox{}
 	return nil
+}
+
+func (m *MemoryStorage) ListBoxes() ([]string, Error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	ids := []string{}
+	for k, _ := range m.boxes {
+		ids = append(ids, k)
+	}
+
+	return ids, nil
 }
 
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		boxes: make(map[string]struct{}),
+		boxes: make(map[string]memoryStorageBox),
 	}
 }

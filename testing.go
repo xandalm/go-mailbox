@@ -19,7 +19,7 @@ func (s *stubStorage) CreateBox(id string) Error {
 	return nil
 }
 
-func (s *stubStorage) List() ([]string, Error) {
+func (s *stubStorage) ListBoxes() ([]string, Error) {
 	ids := []string{}
 	for _, b := range s.Boxes {
 		ids = append(ids, b.id)
@@ -112,7 +112,7 @@ func (s *stubFailingStorage) DeleteContent(string, string) Error {
 }
 
 // List implements Storage.
-func (s *stubFailingStorage) List() ([]string, Error) {
+func (s *stubFailingStorage) ListBoxes() ([]string, Error) {
 	return nil, nil
 }
 
