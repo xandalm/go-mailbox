@@ -59,7 +59,7 @@ var (
 	ErrUnknownBox Error = newError("there's no such box")
 )
 
-type Manager interface {
+type Provider interface {
 	// Create or restore a box.
 	RequestBox(string) (Box, Error)
 	// Remove box and all its contents.
@@ -68,20 +68,11 @@ type Manager interface {
 	ContainsBox(string) bool
 }
 
-type Provider interface {
-	// Create a new box.
-	Create(string) (Box, Error)
-	// Get existing box.
-	Get(string) (Box, Error)
-	// Delete existing box and all its contents.
-	Delete(string) Error
-	// List the identifier from all existing boxes.
-	List() ([]string, Error)
-}
-
 type Bytes []byte
 
 type Box interface {
+	// Box identifier
+	Id() string
 	// Post content and return its identifier.
 	Post(string, Bytes) Error
 	// Read the content matching to the identifier.
@@ -92,67 +83,113 @@ type Box interface {
 	Clean() Error
 }
 
-type manager struct {
+type Storage interface {
+	// Create box container
+	CreateBox(string) Error
+	// Check box container existence
+	List() ([]string, Error)
+	// Delete box container
+	DeleteBox(string) Error
+	// Remove all content from box container
+	CleanBox(string) Error
+	// Create new content into box container
+	CreateContent(string, string, []byte) Error
+	// Read content from box container
+	ReadContent(string, string) ([]byte, Error)
+	// Delete a content from box container
+	DeleteContent(string, string) Error
+}
+
+type box struct {
+	st Storage
+	id string
+}
+
+func (b *box) Id() string {
+	return b.id
+}
+
+func (b *box) Clean() Error {
+	return b.st.CleanBox(b.id)
+}
+
+func (b *box) Delete(id string) Error {
+	return b.st.DeleteContent(b.id, id)
+}
+
+func (b *box) Get(id string) (Bytes, Error) {
+	return b.st.ReadContent(b.id, id)
+}
+
+func (b *box) Post(id string, c Bytes) Error {
+	return b.st.CreateContent(b.id, id, c)
+}
+
+type provider struct {
 	mu  sync.Mutex
-	p   Provider
+	st  Storage
 	idx []string
 }
 
-func NewManager(p Provider) Manager {
-	l, _ := p.List()
-	m := &manager{p: p, idx: l}
-	return m
+func NewProvider(st Storage) Provider {
+	known, err := st.List()
+	slices.Sort(known)
+	if err != nil {
+		panic("mailbox: unable to load")
+	}
+	p := &provider{st: st, idx: known}
+	return p
 }
 
-func (m *manager) contains(id string) (bool, int) {
-	pos, ok := slices.BinarySearch(m.idx, id)
+func (p *provider) contains(id string) (bool, int) {
+	pos, ok := slices.BinarySearch(p.idx, id)
 	return ok, pos
 }
 
-func (m *manager) insert(pos int, id string) {
-	m.idx = slices.Insert(m.idx, pos, id)
+func (p *provider) insert(pos int, id string) {
+	p.idx = slices.Insert(p.idx, pos, id)
 }
 
-func (m *manager) createBox(pos int, id string) (Box, Error) {
-	b, err := m.p.Create(id)
+func (p *provider) createBox(pos int, id string) (Box, Error) {
+	err := p.st.CreateBox(id)
 	if err == nil {
-		m.insert(pos, id)
+		p.insert(pos, id)
+		return &box{id: id}, nil
 	}
-	return b, err
+	return nil, err
 }
 
-func (m *manager) getBox(id string) (Box, Error) {
-	return m.p.Get(id)
-}
+func (p *provider) RequestBox(id string) (Box, Error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 
-func (m *manager) RequestBox(id string) (Box, Error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	has, pos := m.contains(id)
+	has, pos := p.contains(id)
 	if has {
-		return m.getBox(id)
+		return &box{
+			st: p.st,
+			id: id,
+		}, nil
 	}
-	return m.createBox(pos, id)
+	return p.createBox(pos, id)
 }
 
-func (m *manager) EraseBox(id string) Error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	has, pos := m.contains(id)
+func (p *provider) EraseBox(id string) Error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	has, pos := p.contains(id)
 	if !has {
 		return ErrUnknownBox
 	}
-	if err := m.p.Delete(id); err != nil {
+	if err := p.st.DeleteBox(id); err != nil {
 		return err
 	}
-	m.idx = slices.Delete(m.idx, pos, pos+1)
+	p.idx = slices.Delete(p.idx, pos, pos+1)
 	return nil
 }
 
-func (m *manager) ContainsBox(id string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	has, _ := m.contains(id)
+func (p *provider) ContainsBox(id string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	has, _ := p.contains(id)
 	return has
 }

@@ -8,25 +8,25 @@ import (
 
 func TestBoxRequesting(t *testing.T) {
 
-	p := &stubProvider{}
-	m := &manager{
-		p:   p,
+	st := &stubStorage{}
+	p := &provider{
+		st:  st,
 		idx: []string{},
 	}
 
-	got, err := m.RequestBox("box_1")
+	got, err := p.RequestBox("box_1")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, got)
 
-	assert.Contains(t, m.idx, "box_1")
-	assert.ContainsFunc(t, p.Boxes, "box_1", func(e *stubBox, lf string) bool {
-		return e.Id == lf
+	assert.Contains(t, p.idx, "box_1")
+	assert.ContainsFunc(t, st.Boxes, "box_1", func(e stubStorageBox, lf string) bool {
+		return e.id == lf
 	})
 
 	t.Run("returns error for failing provider", func(t *testing.T) {
-		p := &stubFailingProvider{}
-		m := NewManager(p)
+		st := &stubFailingStorage{}
+		m := NewProvider(st)
 
 		_, got := m.RequestBox("box_1")
 
@@ -36,24 +36,24 @@ func TestBoxRequesting(t *testing.T) {
 
 func TestBoxErasing(t *testing.T) {
 
-	p := &stubProvider{
-		Boxes: []*stubBox{{"box_1"}},
+	st := &stubStorage{
+		Boxes: []stubStorageBox{},
 	}
-	m := &manager{
-		p:   p,
+	p := &provider{
+		st:  st,
 		idx: []string{"box_1"},
 	}
 
-	err := m.EraseBox("box_1")
+	err := p.EraseBox("box_1")
 
 	assert.Nil(t, err)
-	assert.NotContains(t, m.idx, "box_1")
-	assert.NotContainsFunc(t, p.Boxes, "box_1", func(sb *stubBox, s string) bool {
-		return sb.Id == s
+	assert.NotContains(t, p.idx, "box_1")
+	assert.NotContainsFunc(t, st.Boxes, "box_1", func(sb stubStorageBox, s string) bool {
+		return sb.id == s
 	})
 
 	t.Run("returns error for inexistent box", func(t *testing.T) {
-		err := m.EraseBox("box_2")
+		err := p.EraseBox("box_2")
 
 		assert.Error(t, err, ErrUnknownBox)
 	})
@@ -61,17 +61,17 @@ func TestBoxErasing(t *testing.T) {
 
 func TestCheckingForBox(t *testing.T) {
 
-	provider := &stubProvider{
-		Boxes: []*stubBox{{"box_1"}},
+	st := &stubStorage{
+		Boxes: []stubStorageBox{{"box_1", make(map[string]Bytes)}},
 	}
-	manager := NewManager(provider)
+	p := NewProvider(st)
 
 	t.Run("returns true", func(t *testing.T) {
-		got := manager.ContainsBox("box_1")
+		got := p.ContainsBox("box_1")
 		assert.True(t, got)
 	})
 	t.Run("returns false", func(t *testing.T) {
-		got := manager.ContainsBox("box_2")
+		got := p.ContainsBox("box_2")
 		assert.False(t, got)
 	})
 }

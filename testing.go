@@ -5,72 +5,119 @@ import (
 	"testing"
 )
 
-type stubBox struct {
-	Id string
+type stubStorageBox struct {
+	id      string
+	content map[string]Bytes
 }
 
-func (s *stubBox) Post(string, Bytes) Error {
-	panic("unimplemented")
+type stubStorage struct {
+	Boxes []stubStorageBox
 }
 
-func (s *stubBox) Get(string) (Bytes, Error) {
-	panic("unimplemented")
+func (s *stubStorage) CreateBox(id string) Error {
+	s.Boxes = append(s.Boxes, stubStorageBox{id, make(map[string]Bytes)})
+	return nil
 }
 
-func (s *stubBox) Delete(string) Error {
-	panic("unimplemented")
+func (s *stubStorage) List() ([]string, Error) {
+	ids := []string{}
+	for _, b := range s.Boxes {
+		ids = append(ids, b.id)
+	}
+	return ids, nil
 }
 
-func (s *stubBox) Clean() Error {
-	panic("unimplemented")
-}
-
-type stubProvider struct {
-	Boxes []*stubBox
-}
-
-func (s *stubProvider) Create(id string) (Box, Error) {
-	b := &stubBox{id}
-	s.Boxes = append(s.Boxes, b)
-	return b, nil
-}
-
-func (s *stubProvider) Get(id string) (Box, Error) {
-	return &stubBox{id}, nil
-}
-
-func (s *stubProvider) Delete(id string) Error {
-	s.Boxes = slices.DeleteFunc(s.Boxes, func(sb *stubBox) bool {
-		return sb.Id == id
+func (s *stubStorage) DeleteBox(box string) Error {
+	s.Boxes = slices.DeleteFunc(s.Boxes, func(b stubStorageBox) bool {
+		return b.id == box
 	})
 	return nil
 }
 
-func (s *stubProvider) List() ([]string, Error) {
-	ret := []string{}
+func (s *stubStorage) CleanBox(box string) Error {
 	for i := 0; i < len(s.Boxes); i++ {
-		ret = append(ret, s.Boxes[i].Id)
+		b := s.Boxes[i]
+		if b.id == box {
+			clear(b.content)
+		}
 	}
-	return ret, nil
+	return nil
+}
+
+func (s *stubStorage) CreateContent(box string, id string, data []byte) Error {
+	for i := 0; i < len(s.Boxes); i++ {
+		b := s.Boxes[i]
+		if b.id == box {
+			if _, ok := b.content[id]; !ok {
+				b.content[id] = data
+				return nil
+			}
+			break
+		}
+	}
+	return ErrUnableToPostContent
+}
+
+func (s *stubStorage) ReadContent(box string, id string) ([]byte, Error) {
+	for i := 0; i < len(s.Boxes); i++ {
+		b := s.Boxes[i]
+		if b.id == box {
+			if data, ok := b.content[id]; ok {
+				return data, nil
+			}
+			break
+		}
+	}
+	return nil, ErrUnableToReadContent
+}
+
+func (s *stubStorage) DeleteContent(box string, id string) Error {
+	for i := 0; i < len(s.Boxes); i++ {
+		b := s.Boxes[i]
+		if b.id == box {
+			delete(b.content, id)
+			return nil
+		}
+	}
+	return ErrUnableToDeleteContent
 }
 
 var errFoo Error = newError("foo error")
 
-type stubFailingProvider struct{}
+type stubFailingStorage struct{}
 
-func (s *stubFailingProvider) Create(id string) (Box, Error) {
-	return nil, errFoo
-}
-
-func (s *stubFailingProvider) Get(id string) (Box, Error) {
-	return nil, errFoo
-}
-
-func (s *stubFailingProvider) Delete(id string) Error {
+// CleanBox implements Storage.
+func (s *stubFailingStorage) CleanBox(string) Error {
 	return errFoo
 }
 
-func (s *stubFailingProvider) List() ([]string, Error) {
+// CreateBox implements Storage.
+func (s *stubFailingStorage) CreateBox(string) Error {
+	return errFoo
+}
+
+// CreateContent implements Storage.
+func (s *stubFailingStorage) CreateContent(string, string, []byte) Error {
+	return errFoo
+}
+
+// DeleteBox implements Storage.
+func (s *stubFailingStorage) DeleteBox(string) Error {
+	return errFoo
+}
+
+// DeleteContent implements Storage.
+func (s *stubFailingStorage) DeleteContent(string, string) Error {
+	return errFoo
+}
+
+// List implements Storage.
+func (s *stubFailingStorage) List() ([]string, Error) {
+	return nil, nil
+}
+
+// ReadContent implements Storage.
+func (s *stubFailingStorage) ReadContent(string, string) ([]byte, Error) {
 	return nil, errFoo
 }
 
