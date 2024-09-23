@@ -19,4 +19,13 @@ func TestMemoryStorage_CreatingBox(t *testing.T) {
 			t.Errorf("didn't create box in storage")
 		}
 	})
+
+	st.boxes["box_2"] = struct{}{}
+
+	t.Run("returns error because id already exists", func(t *testing.T) {
+
+		err := st.CreateBox("box_2")
+
+		assert.Error(t, err, ErrRepeatedBoxIdentifier)
+	})
 }

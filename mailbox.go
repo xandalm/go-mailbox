@@ -56,6 +56,8 @@ var (
 	ErrUnableToDeleteContent Error = newError("unable to delete content")
 	ErrUnableToCleanBox      Error = newError("unable to clean box")
 
+	ErrRepeatedBoxIdentifier Error = NewDetailedError(ErrUnableToCreateBox, "identifier already in use")
+
 	ErrUnknownBox Error = newError("there's no such box")
 )
 
