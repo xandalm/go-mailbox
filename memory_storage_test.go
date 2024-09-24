@@ -30,7 +30,7 @@ func TestMemoryStorage_CreatingBox(t *testing.T) {
 	})
 }
 
-func TestMemoryStorage_Listing(t *testing.T) {
+func TestMemoryStorage_ListingBoxes(t *testing.T) {
 	st := &MemoryStorage{
 		boxes: map[string]memoryStorageBox{
 			"box_1": {},
@@ -48,4 +48,22 @@ func TestMemoryStorage_Listing(t *testing.T) {
 		assert.Contains(t, ids, "box_1")
 		assert.Contains(t, ids, "box_2")
 	})
+}
+
+func TestMemoryStorage_DeletingBox(t *testing.T) {
+	st := &MemoryStorage{
+		boxes: map[string]memoryStorageBox{
+			"box_1": {},
+			"box_2": {},
+		},
+	}
+
+	id := "box_1"
+	err := st.DeleteBox(id)
+
+	assert.Nil(t, err)
+
+	if _, ok := st.boxes[id]; ok {
+		t.Errorf("storage still contains %s", id)
+	}
 }

@@ -26,11 +26,19 @@ func (m *MemoryStorage) ListBoxes() ([]string, Error) {
 	defer m.mu.RUnlock()
 
 	ids := []string{}
-	for k, _ := range m.boxes {
+	for k := range m.boxes {
 		ids = append(ids, k)
 	}
 
 	return ids, nil
+}
+
+func (m *MemoryStorage) DeleteBox(id string) Error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.boxes, id)
+	return nil
 }
 
 func NewMemoryStorage() *MemoryStorage {
