@@ -148,3 +148,25 @@ func TestMemoryStorage_ReadContent(t *testing.T) {
 		assert.Error(t, err, ErrBoxNotFoundToReadContent)
 	})
 }
+
+func TestMemoryStorage_DeleteContent(t *testing.T) {
+	st := &MemoryStorage{
+		boxes: map[string]*memoryStorageBox{
+			"box_1": {
+				content: map[string][]byte{
+					"a7da5": []byte("foo"),
+				},
+			},
+		},
+	}
+
+	err := st.DeleteContent("box_1", "a7da5")
+
+	assert.Nil(t, err)
+	box := st.boxes["box_1"]
+	assert.NotNil(t, box)
+	assert.NotNil(t, box.content)
+	if _, ok := box.content["a7da5"]; ok {
+		t.Errorf("didn't delete the box content")
+	}
+}

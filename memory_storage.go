@@ -56,7 +56,7 @@ func (m *MemoryStorage) CleanBox(id string) Error {
 	return nil
 }
 
-func (m *MemoryStorage) CreateContent(bid string, cid string, c []byte) Error {
+func (m *MemoryStorage) CreateContent(bid, cid string, c []byte) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -74,7 +74,7 @@ func (m *MemoryStorage) CreateContent(bid string, cid string, c []byte) Error {
 	return nil
 }
 
-func (m *MemoryStorage) ReadContent(bid string, cid string) ([]byte, Error) {
+func (m *MemoryStorage) ReadContent(bid, cid string) ([]byte, Error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -84,6 +84,18 @@ func (m *MemoryStorage) ReadContent(bid string, cid string) ([]byte, Error) {
 	}
 
 	return box.content[cid], nil
+}
+
+func (m *MemoryStorage) DeleteContent(bid, cid string) Error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	box, ok := m.boxes[bid]
+	if !ok {
+		return nil
+	}
+	delete(box.content, cid)
+	return nil
 }
 
 func NewMemoryStorage() *MemoryStorage {
