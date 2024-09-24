@@ -22,7 +22,9 @@ func (m *MemoryStorage) CreateBox(id string) Error {
 		return ErrRepeatedBoxIdentifier
 	}
 
-	m.boxes[id] = &memoryStorageBox{}
+	m.boxes[id] = &memoryStorageBox{
+		content: make(map[string][]byte),
+	}
 	return nil
 }
 
@@ -63,9 +65,6 @@ func (m *MemoryStorage) CreateContent(bid, cid string, c []byte) Error {
 	box, ok := m.boxes[bid]
 	if !ok {
 		return ErrBoxNotFoundToPostContent
-	}
-	if box.content == nil {
-		box.content = make(map[string][]byte)
 	}
 	if _, ok := box.content[cid]; ok {
 		return ErrRepeatedContentIdentifier

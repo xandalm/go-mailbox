@@ -14,10 +14,8 @@ func TestMemoryStorage_CreatingBox(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotEmpty(t, st.boxes)
-
-		if _, ok := st.boxes["box_1"]; !ok {
-			t.Errorf("didn't create box in storage")
-		}
+		_, ok := st.boxes["box_1"]
+		assert.True(t, ok, "didn't create box in storage")
 	})
 
 	st.boxes["box_2"] = &memoryStorageBox{}
@@ -62,10 +60,8 @@ func TestMemoryStorage_DeletingBox(t *testing.T) {
 	err := st.DeleteBox(id)
 
 	assert.Nil(t, err)
-
-	if _, ok := st.boxes[id]; ok {
-		t.Errorf("storage still contains %s", id)
-	}
+	_, ok := st.boxes[id]
+	assert.False(t, ok, "storage still contains the box (%s)", id)
 }
 
 func TestMemoryStorage_CleanBox(t *testing.T) {
@@ -103,7 +99,6 @@ func TestMemoryStorage_CreateContent(t *testing.T) {
 
 		assert.Nil(t, err)
 		box := st.boxes["box_1"]
-		assert.NotNil(t, box.content)
 		content, ok := box.content["b042e"]
 		assert.True(t, ok, "the content isn't created in %v", box.content)
 		assert.Equal(t, content, Bytes("bar"))
@@ -166,7 +161,6 @@ func TestMemoryStorage_DeleteContent(t *testing.T) {
 	box := st.boxes["box_1"]
 	assert.NotNil(t, box)
 	assert.NotNil(t, box.content)
-	if _, ok := box.content["a7da5"]; ok {
-		t.Errorf("didn't delete the box content")
-	}
+	_, ok := box.content["a7da5"]
+	assert.False(t, ok, "didn't delete the box content")
 }
