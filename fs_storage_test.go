@@ -72,10 +72,11 @@ func TestNewFileSystemStorage(t *testing.T) {
 	t.Cleanup(newCleanUpFileSystemStorageFunc(dir))
 }
 
+var testPath = ""
+var testDir = "tests_box-storage"
+
 func TestFileSystemStorage_CreatingBox(t *testing.T) {
-	path := ""
-	dir := "tests_box-storage"
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(path, dir)}
+	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
 	createStorageFolder(st)
 
 	t.Run("create box in storage", func(t *testing.T) {
@@ -104,12 +105,46 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 
 		assert.Error(t, err, ErrUnableToCreateBox)
 	})
+
+	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+}
+
+func TestFileSystemStorage_ListingBox(t *testing.T) {
+	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
+	createStorageFolder(st)
+	createBoxFolder(st, "box_A")
+	createBoxFolder(st, "box_B")
+	createBoxFolder(st, "box_C")
+
+	t.Run("returns list with id of all boxes in storage", func(t *testing.T) {
+		got, err := st.ListBoxes()
+
+		assert.Nil(t, err)
+		assert.Contains(t, got, "box_A")
+		assert.Contains(t, got, "box_B")
+		assert.Contains(t, got, "box_C")
+	})
+
+	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
+		st.handler = &mockFileSystemHandler{
+			LsFunc: func(dirname string) ([]string, error) {
+				return nil, errFoo
+			},
+		}
+
+		boxes, err := st.ListBoxes()
+
+		assert.Nil(t, boxes)
+		assert.Error(t, err, ErrUnableToListBoxes)
+	})
+
 	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
 }
 
 type mockFileSystemHandler struct {
 	ExistsFunc func(file string) (bool, error)
 	MkdirFunc  func(dirname string) error
+	LsFunc     func(dirname string) ([]string, error)
 }
 
 func (h *mockFileSystemHandler) Exists(file string) (bool, error) {
@@ -118,4 +153,8 @@ func (h *mockFileSystemHandler) Exists(file string) (bool, error) {
 
 func (h *mockFileSystemHandler) Mkdir(dirname string) error {
 	return h.MkdirFunc(dirname)
+}
+
+func (h *mockFileSystemHandler) Ls(dirname string) ([]string, error) {
+	return h.LsFunc(dirname)
 }

@@ -55,6 +55,7 @@ var (
 	ErrUnableToReadContent   Error = newError("unable to read content")
 	ErrUnableToDeleteContent Error = newError("unable to delete content")
 	ErrUnableToCleanBox      Error = newError("unable to clean box")
+	ErrUnableToListBoxes     Error = newError("unable to list boxes")
 
 	ErrRepeatedBoxIdentifier     Error = NewDetailedError(ErrUnableToCreateBox, "identifier already in use")
 	ErrRepeatedContentIdentifier Error = NewDetailedError(ErrUnableToPostContent, "identifier already in use")

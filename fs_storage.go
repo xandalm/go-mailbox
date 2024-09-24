@@ -8,6 +8,7 @@ import (
 type fileSystemHandler interface {
 	Exists(string) (bool, error)
 	Mkdir(string) error
+	Ls(string) ([]string, error)
 }
 
 type defaulFileSystemHandler struct{}
@@ -26,6 +27,19 @@ func (h *defaulFileSystemHandler) Mkdir(dirname string) error {
 	return os.Mkdir(dirname, 0666)
 }
 
+func (h *defaulFileSystemHandler) Ls(dirname string) ([]string, error) {
+	f, err := os.Open(dirname)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	names, err := f.Readdirnames(0)
+	if err != nil {
+		return nil, err
+	}
+	return names, nil
+}
+
 type fileSystemStorage struct {
 	handler fileSystemHandler
 	path    string
@@ -42,6 +56,14 @@ func (s *fileSystemStorage) CreateBox(id string) Error {
 		return ErrUnableToCreateBox
 	}
 	return nil
+}
+
+func (s *fileSystemStorage) ListBoxes() ([]string, Error) {
+	if ids, err := s.handler.Ls(s.path); err != nil {
+		return nil, ErrUnableToListBoxes
+	} else {
+		return ids, nil
+	}
 }
 
 func NewFileSystemStorage(path, dir string) *fileSystemStorage {
