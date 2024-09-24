@@ -7,7 +7,9 @@ import (
 )
 
 func TestMemoryStorage_CreatingBox(t *testing.T) {
-	st := NewMemoryStorage()
+	st := &memoryStorage{
+		boxes: map[string]*memoryStorageBox{},
+	}
 
 	t.Run("create box in storage", func(t *testing.T) {
 		err := st.CreateBox("box_1")
@@ -29,7 +31,7 @@ func TestMemoryStorage_CreatingBox(t *testing.T) {
 }
 
 func TestMemoryStorage_ListingBoxes(t *testing.T) {
-	st := &MemoryStorage{
+	st := &memoryStorage{
 		boxes: map[string]*memoryStorageBox{
 			"box_1": {},
 			"box_2": {},
@@ -49,7 +51,7 @@ func TestMemoryStorage_ListingBoxes(t *testing.T) {
 }
 
 func TestMemoryStorage_DeletingBox(t *testing.T) {
-	st := &MemoryStorage{
+	st := &memoryStorage{
 		boxes: map[string]*memoryStorageBox{
 			"box_1": {},
 			"box_2": {},
@@ -65,7 +67,7 @@ func TestMemoryStorage_DeletingBox(t *testing.T) {
 }
 
 func TestMemoryStorage_CleanBox(t *testing.T) {
-	st := &MemoryStorage{
+	st := &memoryStorage{
 		boxes: map[string]*memoryStorageBox{
 			"box_1": {
 				content: map[string][]byte{
@@ -84,7 +86,7 @@ func TestMemoryStorage_CleanBox(t *testing.T) {
 }
 
 func TestMemoryStorage_CreateContent(t *testing.T) {
-	st := &MemoryStorage{
+	st := &memoryStorage{
 		boxes: map[string]*memoryStorageBox{
 			"box_1": {
 				content: map[string][]byte{
@@ -118,7 +120,7 @@ func TestMemoryStorage_CreateContent(t *testing.T) {
 }
 
 func TestMemoryStorage_ReadContent(t *testing.T) {
-	st := &MemoryStorage{
+	st := &memoryStorage{
 		boxes: map[string]*memoryStorageBox{
 			"box_1": {
 				content: map[string][]byte{
@@ -145,7 +147,7 @@ func TestMemoryStorage_ReadContent(t *testing.T) {
 }
 
 func TestMemoryStorage_DeleteContent(t *testing.T) {
-	st := &MemoryStorage{
+	st := &memoryStorage{
 		boxes: map[string]*memoryStorageBox{
 			"box_1": {
 				content: map[string][]byte{

@@ -9,12 +9,12 @@ type memoryStorageBox struct {
 	content map[string][]byte
 }
 
-type MemoryStorage struct {
+type memoryStorage struct {
 	mu    sync.RWMutex
 	boxes map[string]*memoryStorageBox
 }
 
-func (m *MemoryStorage) CreateBox(id string) Error {
+func (m *memoryStorage) CreateBox(id string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -28,7 +28,7 @@ func (m *MemoryStorage) CreateBox(id string) Error {
 	return nil
 }
 
-func (m *MemoryStorage) ListBoxes() ([]string, Error) {
+func (m *memoryStorage) ListBoxes() ([]string, Error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -40,7 +40,7 @@ func (m *MemoryStorage) ListBoxes() ([]string, Error) {
 	return ids, nil
 }
 
-func (m *MemoryStorage) DeleteBox(id string) Error {
+func (m *memoryStorage) DeleteBox(id string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -48,7 +48,7 @@ func (m *MemoryStorage) DeleteBox(id string) Error {
 	return nil
 }
 
-func (m *MemoryStorage) CleanBox(id string) Error {
+func (m *memoryStorage) CleanBox(id string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -58,7 +58,7 @@ func (m *MemoryStorage) CleanBox(id string) Error {
 	return nil
 }
 
-func (m *MemoryStorage) CreateContent(bid, cid string, c []byte) Error {
+func (m *memoryStorage) CreateContent(bid, cid string, c []byte) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -73,7 +73,7 @@ func (m *MemoryStorage) CreateContent(bid, cid string, c []byte) Error {
 	return nil
 }
 
-func (m *MemoryStorage) ReadContent(bid, cid string) ([]byte, Error) {
+func (m *memoryStorage) ReadContent(bid, cid string) ([]byte, Error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -85,7 +85,7 @@ func (m *MemoryStorage) ReadContent(bid, cid string) ([]byte, Error) {
 	return box.content[cid], nil
 }
 
-func (m *MemoryStorage) DeleteContent(bid, cid string) Error {
+func (m *memoryStorage) DeleteContent(bid, cid string) Error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -97,8 +97,8 @@ func (m *MemoryStorage) DeleteContent(bid, cid string) Error {
 	return nil
 }
 
-func NewMemoryStorage() *MemoryStorage {
-	return &MemoryStorage{
+func NewMemoryStorage() Storage {
+	return &memoryStorage{
 		boxes: make(map[string]*memoryStorageBox),
 	}
 }
