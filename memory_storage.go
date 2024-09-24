@@ -2,7 +2,9 @@ package mailbox
 
 import "sync"
 
-type memoryStorageBox struct{}
+type memoryStorageBox struct {
+	content map[string]Bytes
+}
 
 type MemoryStorage struct {
 	mu    sync.RWMutex
@@ -17,7 +19,9 @@ func (m *MemoryStorage) CreateBox(id string) Error {
 		return ErrRepeatedBoxIdentifier
 	}
 
-	m.boxes[id] = memoryStorageBox{}
+	m.boxes[id] = memoryStorageBox{
+		content: make(map[string]Bytes),
+	}
 	return nil
 }
 
@@ -38,6 +42,16 @@ func (m *MemoryStorage) DeleteBox(id string) Error {
 	defer m.mu.Unlock()
 
 	delete(m.boxes, id)
+	return nil
+}
+
+func (m *MemoryStorage) CleanBox(id string) Error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if box, ok := m.boxes[id]; ok {
+		clear(box.content)
+	}
 	return nil
 }
 

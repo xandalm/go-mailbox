@@ -67,3 +67,22 @@ func TestMemoryStorage_DeletingBox(t *testing.T) {
 		t.Errorf("storage still contains %s", id)
 	}
 }
+
+func TestMemoryStorage_CleanBox(t *testing.T) {
+	st := &MemoryStorage{
+		boxes: map[string]memoryStorageBox{
+			"box_1": {
+				content: map[string]Bytes{
+					"a7da5": Bytes("foo"),
+				},
+			},
+		},
+	}
+
+	err := st.CleanBox("box_1")
+
+	assert.Nil(t, err)
+	box, ok := st.boxes["box_1"]
+	assert.True(t, ok, "the box must be kept in %v", st.boxes)
+	assert.Empty(t, box.content)
+}
