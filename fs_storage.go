@@ -5,16 +5,42 @@ import (
 	"path/filepath"
 )
 
+type fileSystemHandler interface {
+	Exists(string) (bool, error)
+	Mkdir(string) error
+}
+
+type defaulFileSystemHandler struct{}
+
+func (h *defaulFileSystemHandler) Exists(file string) (bool, error) {
+	if _, err := os.Stat(file); err == nil {
+		return true, nil
+	} else if os.IsNotExist(err) {
+		return false, nil
+	} else {
+		return false, err
+	}
+}
+
+func (h *defaulFileSystemHandler) Mkdir(dirname string) error {
+	return os.Mkdir(dirname, 0666)
+}
+
 type fileSystemStorage struct {
-	path string
+	handler fileSystemHandler
+	path    string
 }
 
 func (s *fileSystemStorage) CreateBox(id string) Error {
 	path := filepath.Join(s.path, id)
-	if _, err := os.Stat(path); err == nil {
+	if exists, err := s.handler.Exists(path); err != nil {
+		return ErrUnableToCreateBox
+	} else if exists {
 		return ErrRepeatedBoxIdentifier
 	}
-	os.Mkdir(path, 0666)
+	if err := s.handler.Mkdir(path); err != nil {
+		return ErrUnableToCreateBox
+	}
 	return nil
 }
 

@@ -75,7 +75,7 @@ func TestNewFileSystemStorage(t *testing.T) {
 func TestFileSystemStorage_CreatingBox(t *testing.T) {
 	path := ""
 	dir := "tests_box-storage"
-	st := &fileSystemStorage{filepath.Join(path, dir)}
+	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(path, dir)}
 	createStorageFolder(st)
 
 	t.Run("create box in storage", func(t *testing.T) {
@@ -94,5 +94,28 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 		assert.Error(t, err, ErrRepeatedBoxIdentifier)
 	})
 
+	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
+		st.handler = &mockFileSystemHandler{
+			ExistsFunc: func(file string) (bool, error) {
+				return false, errFoo
+			},
+		}
+		err := st.CreateBox("box_3")
+
+		assert.Error(t, err, ErrUnableToCreateBox)
+	})
 	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+}
+
+type mockFileSystemHandler struct {
+	ExistsFunc func(file string) (bool, error)
+	MkdirFunc  func(dirname string) error
+}
+
+func (h *mockFileSystemHandler) Exists(file string) (bool, error) {
+	return h.ExistsFunc(file)
+}
+
+func (h *mockFileSystemHandler) Mkdir(dirname string) error {
+	return h.MkdirFunc(dirname)
 }
