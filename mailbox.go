@@ -58,7 +58,8 @@ var (
 
 	ErrRepeatedBoxIdentifier     Error = NewDetailedError(ErrUnableToCreateBox, "identifier already in use")
 	ErrRepeatedContentIdentifier Error = NewDetailedError(ErrUnableToPostContent, "identifier already in use")
-	ErrBoxNotFoundToPost         Error = NewDetailedError(ErrUnableToPostContent, "box not found")
+	ErrBoxNotFoundToPostContent  Error = NewDetailedError(ErrUnableToPostContent, "box not found")
+	ErrBoxNotFoundToReadContent  Error = NewDetailedError(ErrUnableToReadContent, "box not found")
 
 	ErrUnknownBox Error = newError("there's no such box")
 )

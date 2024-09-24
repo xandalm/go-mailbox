@@ -118,6 +118,33 @@ func TestMemoryStorage_CreateContent(t *testing.T) {
 	t.Run("returns error because box doesn't exist", func(t *testing.T) {
 		err := st.CreateContent("box_2", "a7da5", Bytes("baz"))
 
-		assert.Error(t, err, ErrBoxNotFoundToPost)
+		assert.Error(t, err, ErrBoxNotFoundToPostContent)
+	})
+}
+
+func TestMemoryStorage_ReadContent(t *testing.T) {
+	st := &MemoryStorage{
+		boxes: map[string]*memoryStorageBox{
+			"box_1": {
+				content: map[string][]byte{
+					"a7da5": []byte("foo"),
+				},
+			},
+		},
+	}
+
+	t.Run("read box content from storage", func(t *testing.T) {
+		got, err := st.ReadContent("box_1", "a7da5")
+		want := []byte("foo")
+
+		assert.Nil(t, err)
+		assert.Equal(t, got, want)
+	})
+
+	t.Run("returns error because box doesn't exist", func(t *testing.T) {
+		content, err := st.ReadContent("box_2", "a7da5")
+
+		assert.Nil(t, content)
+		assert.Error(t, err, ErrBoxNotFoundToReadContent)
 	})
 }

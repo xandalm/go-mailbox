@@ -62,7 +62,7 @@ func (m *MemoryStorage) CreateContent(bid string, cid string, c []byte) Error {
 
 	box, ok := m.boxes[bid]
 	if !ok {
-		return ErrBoxNotFoundToPost
+		return ErrBoxNotFoundToPostContent
 	}
 	if box.content == nil {
 		box.content = make(map[string][]byte)
@@ -72,6 +72,18 @@ func (m *MemoryStorage) CreateContent(bid string, cid string, c []byte) Error {
 	}
 	box.content[cid] = bytes.Clone(c)
 	return nil
+}
+
+func (m *MemoryStorage) ReadContent(bid string, cid string) ([]byte, Error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	box, ok := m.boxes[bid]
+	if !ok {
+		return nil, ErrBoxNotFoundToReadContent
+	}
+
+	return box.content[cid], nil
 }
 
 func NewMemoryStorage() *MemoryStorage {
