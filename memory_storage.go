@@ -1,14 +1,17 @@
 package mailbox
 
-import "sync"
+import (
+	"bytes"
+	"sync"
+)
 
 type memoryStorageBox struct {
-	content map[string]Bytes
+	content map[string][]byte
 }
 
 type MemoryStorage struct {
 	mu    sync.RWMutex
-	boxes map[string]memoryStorageBox
+	boxes map[string]*memoryStorageBox
 }
 
 func (m *MemoryStorage) CreateBox(id string) Error {
@@ -19,9 +22,7 @@ func (m *MemoryStorage) CreateBox(id string) Error {
 		return ErrRepeatedBoxIdentifier
 	}
 
-	m.boxes[id] = memoryStorageBox{
-		content: make(map[string]Bytes),
-	}
+	m.boxes[id] = &memoryStorageBox{}
 	return nil
 }
 
@@ -55,8 +56,26 @@ func (m *MemoryStorage) CleanBox(id string) Error {
 	return nil
 }
 
+func (m *MemoryStorage) CreateContent(bid string, cid string, c []byte) Error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	box, ok := m.boxes[bid]
+	if !ok {
+		return ErrBoxNotFoundToPost
+	}
+	if box.content == nil {
+		box.content = make(map[string][]byte)
+	}
+	if _, ok := box.content[cid]; ok {
+		return ErrRepeatedContentIdentifier
+	}
+	box.content[cid] = bytes.Clone(c)
+	return nil
+}
+
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		boxes: make(map[string]memoryStorageBox),
+		boxes: make(map[string]*memoryStorageBox),
 	}
 }

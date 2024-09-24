@@ -20,7 +20,7 @@ func TestMemoryStorage_CreatingBox(t *testing.T) {
 		}
 	})
 
-	st.boxes["box_2"] = memoryStorageBox{}
+	st.boxes["box_2"] = &memoryStorageBox{}
 
 	t.Run("returns error because id already exists", func(t *testing.T) {
 
@@ -32,7 +32,7 @@ func TestMemoryStorage_CreatingBox(t *testing.T) {
 
 func TestMemoryStorage_ListingBoxes(t *testing.T) {
 	st := &MemoryStorage{
-		boxes: map[string]memoryStorageBox{
+		boxes: map[string]*memoryStorageBox{
 			"box_1": {},
 			"box_2": {},
 		},
@@ -52,7 +52,7 @@ func TestMemoryStorage_ListingBoxes(t *testing.T) {
 
 func TestMemoryStorage_DeletingBox(t *testing.T) {
 	st := &MemoryStorage{
-		boxes: map[string]memoryStorageBox{
+		boxes: map[string]*memoryStorageBox{
 			"box_1": {},
 			"box_2": {},
 		},
@@ -70,9 +70,9 @@ func TestMemoryStorage_DeletingBox(t *testing.T) {
 
 func TestMemoryStorage_CleanBox(t *testing.T) {
 	st := &MemoryStorage{
-		boxes: map[string]memoryStorageBox{
+		boxes: map[string]*memoryStorageBox{
 			"box_1": {
-				content: map[string]Bytes{
+				content: map[string][]byte{
 					"a7da5": Bytes("foo"),
 				},
 			},
@@ -85,4 +85,39 @@ func TestMemoryStorage_CleanBox(t *testing.T) {
 	box, ok := st.boxes["box_1"]
 	assert.True(t, ok, "the box must be kept in %v", st.boxes)
 	assert.Empty(t, box.content)
+}
+
+func TestMemoryStorage_CreateContent(t *testing.T) {
+	st := &MemoryStorage{
+		boxes: map[string]*memoryStorageBox{
+			"box_1": {
+				content: map[string][]byte{
+					"a7da5": []byte("foo"),
+				},
+			},
+		},
+	}
+
+	t.Run("create box content in storage", func(t *testing.T) {
+		err := st.CreateContent("box_1", "b042e", Bytes("bar"))
+
+		assert.Nil(t, err)
+		box := st.boxes["box_1"]
+		assert.NotNil(t, box.content)
+		content, ok := box.content["b042e"]
+		assert.True(t, ok, "the content isn't created in %v", box.content)
+		assert.Equal(t, content, Bytes("bar"))
+	})
+
+	t.Run("returns error because the content id already exists", func(t *testing.T) {
+		err := st.CreateContent("box_1", "a7da5", Bytes("baz"))
+
+		assert.Error(t, err, ErrRepeatedContentIdentifier)
+	})
+
+	t.Run("returns error because box doesn't exist", func(t *testing.T) {
+		err := st.CreateContent("box_2", "a7da5", Bytes("baz"))
+
+		assert.Error(t, err, ErrBoxNotFoundToPost)
+	})
 }
