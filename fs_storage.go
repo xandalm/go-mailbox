@@ -10,6 +10,7 @@ type fileSystemHandler interface {
 	Mkdir(string) error
 	Ls(string) ([]string, error)
 	Remove(string) error
+	Clean(string) error
 }
 
 type defaulFileSystemHandler struct{}
@@ -45,6 +46,20 @@ func (h *defaulFileSystemHandler) Remove(name string) error {
 	return os.Remove(name)
 }
 
+func (h *defaulFileSystemHandler) Clean(name string) error {
+	names, err := h.Ls(name)
+	if err != nil {
+		return err
+	}
+	for _, n := range names {
+		err = h.Remove(filepath.Join(name, n))
+		if err != nil {
+			break
+		}
+	}
+	return err
+}
+
 type fileSystemStorage struct {
 	handler fileSystemHandler
 	path    string
@@ -75,6 +90,14 @@ func (s *fileSystemStorage) DeleteBox(id string) Error {
 	path := filepath.Join(s.path, id)
 	if err := s.handler.Remove(path); err != nil {
 		return ErrUnableToDeleteBox
+	}
+	return nil
+}
+
+func (s *fileSystemStorage) CleanBox(id string) Error {
+	path := filepath.Join(s.path, id)
+	if err := s.handler.Clean(path); err != nil {
+		return ErrUnableToCleanBox
 	}
 	return nil
 }
