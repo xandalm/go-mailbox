@@ -18,6 +18,17 @@ func createStorageFolder(st *fileSystemStorage) {
 	}
 }
 
+func createStorage(path, dir string) *fileSystemStorage {
+	path = filepath.Join(path, dir)
+	st := &fileSystemStorage{
+		handler: &defaulFileSystemHandler{},
+		path:    path,
+	}
+	createStorageFolder(st)
+	st.f, _ = os.Open(path)
+	return st
+}
+
 func createBoxFolder(st *fileSystemStorage, bid string) {
 	if err := os.MkdirAll(filepath.Join(st.path, bid), 0666); err != nil {
 		log.Fatalf("unable to create box folder, %v", err)
@@ -127,9 +138,12 @@ func assertContentFileDataIsEqual(t *testing.T, st *fileSystemStorage, bid, cid 
 	}
 }
 
-func newCleanUpFileSystemStorageFunc(path string) func() {
+func newCleanUpStorageFunc(st *fileSystemStorage) func() {
 	return func() {
-		if err := os.RemoveAll(path); err != nil {
+		if err := st.f.Close(); err != nil {
+			log.Fatal("unable to close storage file")
+		}
+		if err := os.RemoveAll(st.path); err != nil {
 			log.Fatal("unable to remove residual data")
 		}
 	}
@@ -141,7 +155,10 @@ func TestNewFileSystemStorage(t *testing.T) {
 		got := NewFileSystemStorage("", dir)
 
 		assert.NotNil(t, got)
+		assert.NotNil(t, got.f)
 		assertStorageFolderIsCreated(t, got)
+
+		t.Cleanup(newCleanUpStorageFunc(got))
 	})
 
 	t.Run("panic because empty dirname", func(t *testing.T) {
@@ -150,15 +167,13 @@ func TestNewFileSystemStorage(t *testing.T) {
 		})
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(dir))
 }
 
 var testPath = ""
 var testDir = "tests_box-storage"
 
 func TestFileSystemStorage_CreatingBox(t *testing.T) {
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
-	createStorageFolder(st)
+	st := createStorage(testPath, testDir)
 
 	t.Run("create box in storage", func(t *testing.T) {
 		err := st.CreateBox("box_1")
@@ -187,12 +202,11 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 		assert.Error(t, err, ErrUnableToCreateBox)
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
 func TestFileSystemStorage_ListingBox(t *testing.T) {
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
-	createStorageFolder(st)
+	st := createStorage(testPath, testDir)
 	createBoxFolder(st, "box_A")
 	createBoxFolder(st, "box_B")
 	createBoxFolder(st, "box_C")
@@ -219,12 +233,11 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 		assert.Error(t, err, ErrUnableToListBoxes)
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
 func TestFileSystemStorage_DeletingBox(t *testing.T) {
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
-	createStorageFolder(st)
+	st := createStorage(testPath, testDir)
 	createBoxFolder(st, "box_A")
 	createBoxFolder(st, "box_B")
 
@@ -247,12 +260,11 @@ func TestFileSystemStorage_DeletingBox(t *testing.T) {
 		assert.Error(t, err, ErrUnableToDeleteBox)
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
 func TestFileSystemStorage_CleaningBox(t *testing.T) {
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
-	createStorageFolder(st)
+	st := createStorage(testPath, testDir)
 	createBoxFolder(st, "box_1")
 	createContentFile(st, "box_1", "data_1", []byte("foo"))
 	createContentFile(st, "box_1", "data_2", []byte("bar"))
@@ -276,12 +288,11 @@ func TestFileSystemStorage_CleaningBox(t *testing.T) {
 		assert.Error(t, err, ErrUnableToCleanBox)
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
 func TestFileSystemStorage_CreatingContent(t *testing.T) {
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
-	createStorageFolder(st)
+	st := createStorage(testPath, testDir)
 	createBoxFolder(st, "box_1")
 
 	t.Run("create content", func(t *testing.T) {
@@ -332,12 +343,11 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 		})
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
 func TestFileSystemStorage_ReadingContent(t *testing.T) {
-	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
-	createStorageFolder(st)
+	st := createStorage(testPath, testDir)
 	createBoxFolder(st, "box_1")
 	createContentFile(st, "box_1", "data_1", []byte("foo"))
 
@@ -387,7 +397,7 @@ func TestFileSystemStorage_ReadingContent(t *testing.T) {
 		})
 	})
 
-	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
 type mockFileSystemHandler struct {

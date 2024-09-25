@@ -71,6 +71,7 @@ func (h *defaulFileSystemHandler) ReadFile(name string) ([]byte, error) {
 }
 
 type fileSystemStorage struct {
+	f       *os.File
 	handler fileSystemHandler
 	path    string
 }
@@ -145,16 +146,23 @@ func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
 
 func NewFileSystemStorage(path, dir string) *fileSystemStorage {
 	if dir == "" {
-		panic("mailbox: on filesystem storage creation, the dir (folder name) is required and can't be empty string")
+		panic("mailbox: loading filesystem storage, the dir (folder name) is required and can't be empty string")
 	}
 
 	path = filepath.Join(path, dir)
 	err := os.MkdirAll(path, 0666)
 	if err != nil && !os.IsExist(err) {
-		panic("mailbox: on filesystem storage creation, unable to create storage folder")
+		panic("mailbox: loading filesystem storage, unable to create folder")
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		panic("mailbox: loading filesystem storage, unable to open storage file")
 	}
 
 	return &fileSystemStorage{
-		path: path,
+		f:       f,
+		handler: &defaulFileSystemHandler{},
+		path:    path,
 	}
 }
