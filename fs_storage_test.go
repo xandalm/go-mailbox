@@ -21,6 +21,7 @@ func createStorageFolder(st *fileSystemStorage) {
 func createStorage(path, dir string) *fileSystemStorage {
 	path = filepath.Join(path, dir)
 	st := &fileSystemStorage{
+		boxes:   make(map[string]*os.File),
 		handler: &defaulFileSystemHandler{},
 		path:    path,
 	}
@@ -140,6 +141,12 @@ func assertContentFileDataIsEqual(t *testing.T, st *fileSystemStorage, bid, cid 
 
 func newCleanUpStorageFunc(st *fileSystemStorage) func() {
 	return func() {
+		if st.f == nil {
+			return
+		}
+		for _, f := range st.boxes {
+			f.Close()
+		}
 		if err := st.f.Close(); err != nil {
 			log.Fatal("unable to close storage file")
 		}
@@ -153,6 +160,10 @@ func TestNewFileSystemStorage(t *testing.T) {
 		got := NewFileSystemStorage(path, dir)
 
 		assert.NotNil(t, got)
+		assert.NotNil(t, got.f)
+		assert.NotNil(t, got.boxes)
+		assert.Equal(t, got.path, filepath.Join(path, dir))
+
 		assertStorageFolderIsCreated(t, got)
 
 		t.Cleanup(newCleanUpStorageFunc(got))
@@ -176,6 +187,13 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 		err := st.CreateBox("box_1")
 
 		assert.Nil(t, err)
+		bf, ok := st.boxes["box_1"]
+		if !ok {
+			t.Fatal("didn't create box in storage")
+		}
+		if bf == nil {
+			t.Fatal("didn't keep box file open in storage")
+		}
 		assertBoxFolderIsCreated(t, st, "box_1")
 	})
 
@@ -189,14 +207,37 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 	})
 
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
-		st.handler = &mockFileSystemHandler{
-			ExistsFunc: func(name string) (bool, error) {
-				return false, errFoo
-			},
-		}
-		err := st.CreateBox("box_3")
+		bid := "box_3"
+		t.Run("unable to make box folder", func(t *testing.T) {
+			st.handler = &mockFileSystemHandler{
+				OpenFunc: dummyOpenFunc,
+				ExistsFunc: func(name string) (bool, error) {
+					return false, nil
+				},
+				MkdirFunc: func(name string) error {
+					return errFoo
+				},
+			}
+			err := st.CreateBox(bid)
 
-		assert.Error(t, err, ErrUnableToCreateBox)
+			assert.Error(t, err, ErrUnableToCreateBox)
+		})
+		t.Run("unable to keep box file open", func(t *testing.T) {
+			st.handler = &mockFileSystemHandler{
+				OpenFunc: func(name string) (*os.File, error) {
+					return nil, errFoo
+				},
+				ExistsFunc: func(name string) (bool, error) {
+					return false, nil
+				},
+				MkdirFunc: func(name string) error {
+					return nil
+				},
+			}
+			err := st.CreateBox(bid)
+
+			assert.Error(t, err, ErrUnableToCreateBox)
+		})
 	})
 
 	t.Cleanup(newCleanUpStorageFunc(st))
@@ -220,6 +261,7 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
+			OpenFunc: dummyOpenFunc,
 			LsFunc: func(name string) ([]string, error) {
 				return nil, errFoo
 			},
@@ -249,6 +291,7 @@ func TestFileSystemStorage_DeletingBox(t *testing.T) {
 
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
+			OpenFunc: dummyOpenFunc,
 			RemoveFunc: func(name string) error {
 				return errFoo
 			},
@@ -278,6 +321,7 @@ func TestFileSystemStorage_CleaningBox(t *testing.T) {
 
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
+			OpenFunc: dummyOpenFunc,
 			CleanFunc: func(name string) error {
 				return errFoo
 			},
@@ -321,6 +365,7 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 		data := []byte("baz")
 		t.Run("unable to check id existence", func(t *testing.T) {
 			st.handler = &mockFileSystemHandler{
+				OpenFunc: dummyOpenFunc,
 				ExistsFunc: func(name string) (bool, error) {
 					return false, errFoo
 				},
@@ -331,6 +376,7 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 		})
 		t.Run("unable to write file", func(t *testing.T) {
 			st.handler = &mockFileSystemHandler{
+				OpenFunc: dummyOpenFunc,
 				ExistsFunc: func(name string) (bool, error) {
 					return false, nil
 				},
@@ -374,6 +420,7 @@ func TestFileSystemStorage_ReadingContent(t *testing.T) {
 		cid := "data_1"
 		t.Run("unable to check content existence", func(t *testing.T) {
 			st.handler = &mockFileSystemHandler{
+				OpenFunc: dummyOpenFunc,
 				ExistsFunc: func(name string) (bool, error) {
 					return false, errFoo
 				},
@@ -385,6 +432,7 @@ func TestFileSystemStorage_ReadingContent(t *testing.T) {
 		})
 		t.Run("unable to read file", func(t *testing.T) {
 			st.handler = &mockFileSystemHandler{
+				OpenFunc: dummyOpenFunc,
 				ExistsFunc: func(name string) (bool, error) {
 					return true, nil
 				},
@@ -402,7 +450,12 @@ func TestFileSystemStorage_ReadingContent(t *testing.T) {
 	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
+var dummyOpenFunc = func(_ string) (*os.File, error) {
+	return nil, nil
+}
+
 type mockFileSystemHandler struct {
+	OpenFunc      func(name string) (*os.File, error)
 	ExistsFunc    func(name string) (bool, error)
 	MkdirFunc     func(name string) error
 	LsFunc        func(name string) ([]string, error)
@@ -410,6 +463,10 @@ type mockFileSystemHandler struct {
 	CleanFunc     func(name string) error
 	WriteFileFunc func(name string, data []byte) error
 	ReadFileFunc  func(name string) ([]byte, error)
+}
+
+func (h *mockFileSystemHandler) Open(name string) (*os.File, error) {
+	return h.OpenFunc(name)
 }
 
 func (h *mockFileSystemHandler) Exists(name string) (bool, error) {

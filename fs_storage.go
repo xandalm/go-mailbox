@@ -6,6 +6,7 @@ import (
 )
 
 type fileSystemHandler interface {
+	Open(string) (*os.File, error)
 	Exists(string) (bool, error)
 	Mkdir(string) error
 	Ls(string) ([]string, error)
@@ -16,6 +17,14 @@ type fileSystemHandler interface {
 }
 
 type defaulFileSystemHandler struct{}
+
+func (h *defaulFileSystemHandler) Open(name string) (*os.File, error) {
+	f, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
 
 func (h *defaulFileSystemHandler) Exists(name string) (bool, error) {
 	if _, err := os.Stat(name); err == nil {
@@ -72,6 +81,7 @@ func (h *defaulFileSystemHandler) ReadFile(name string) ([]byte, error) {
 
 type fileSystemStorage struct {
 	f       *os.File
+	boxes   map[string]*os.File
 	handler fileSystemHandler
 	path    string
 }
@@ -86,6 +96,11 @@ func (s *fileSystemStorage) CreateBox(id string) Error {
 	if err := s.handler.Mkdir(path); err != nil {
 		return ErrUnableToCreateBox
 	}
+	f, err := s.handler.Open(path)
+	if err != nil {
+		return ErrUnableToCreateBox
+	}
+	s.boxes[id] = f
 	return nil
 }
 
@@ -162,6 +177,7 @@ func NewFileSystemStorage(path, dir string) *fileSystemStorage {
 
 	return &fileSystemStorage{
 		f:       f,
+		boxes:   make(map[string]*os.File),
 		handler: &defaulFileSystemHandler{},
 		path:    path,
 	}
