@@ -12,6 +12,7 @@ type fileSystemHandler interface {
 	Remove(string) error
 	Clean(string) error
 	WriteFile(string, []byte) error
+	ReadFile(string) ([]byte, error)
 }
 
 type defaulFileSystemHandler struct{}
@@ -62,8 +63,11 @@ func (h *defaulFileSystemHandler) Clean(name string) error {
 }
 
 func (h *defaulFileSystemHandler) WriteFile(name string, data []byte) error {
-	os.WriteFile(name, data, 0666)
-	return nil
+	return os.WriteFile(name, data, 0666)
+}
+
+func (h *defaulFileSystemHandler) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
 }
 
 type fileSystemStorage struct {
@@ -121,6 +125,22 @@ func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
 		return ErrUnableToPostContent
 	}
 	return nil
+}
+
+func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
+	path := filepath.Join(s.path, bid, cid)
+	exists, err := s.handler.Exists(path)
+	if err != nil {
+		return nil, ErrUnableToReadContent
+	}
+	if !exists {
+		return nil, ErrContentNotFound
+	}
+	data, err := s.handler.ReadFile(path)
+	if err != nil {
+		return nil, ErrUnableToReadContent
+	}
+	return data, nil
 }
 
 func NewFileSystemStorage(path, dir string) *fileSystemStorage {

@@ -62,6 +62,8 @@ var (
 	ErrBoxNotFoundToPostContent  Error = NewDetailedError(ErrUnableToPostContent, "box not found")
 	ErrBoxNotFoundToReadContent  Error = NewDetailedError(ErrUnableToReadContent, "box not found")
 
+	ErrContentNotFound Error = NewDetailedError(ErrUnableToReadContent, "content not found")
+
 	ErrUnknownBox Error = newError("there's no such box")
 )
 

@@ -335,6 +335,61 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
 }
 
+func TestFileSystemStorage_ReadingContent(t *testing.T) {
+	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
+	createStorageFolder(st)
+	createBoxFolder(st, "box_1")
+	createContentFile(st, "box_1", "data_1", []byte("foo"))
+
+	t.Run("read content", func(t *testing.T) {
+		got, err := st.ReadContent("box_1", "data_1")
+
+		assert.Nil(t, err)
+		assert.NotNil(t, got)
+		want := []byte("foo")
+		assert.Equal(t, got, want)
+	})
+
+	t.Run("returns error because content file doesn't exist", func(t *testing.T) {
+		data, err := st.ReadContent("box_1", "data_2")
+
+		assert.Nil(t, data)
+		assert.Error(t, err, ErrContentNotFound)
+	})
+
+	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
+		bid := "box_1"
+		cid := "data_1"
+		t.Run("unable to check content existence", func(t *testing.T) {
+			st.handler = &mockFileSystemHandler{
+				ExistsFunc: func(name string) (bool, error) {
+					return false, errFoo
+				},
+			}
+			data, err := st.ReadContent(bid, cid)
+
+			assert.Nil(t, data)
+			assert.Error(t, err, ErrUnableToReadContent)
+		})
+		t.Run("unable to read file", func(t *testing.T) {
+			st.handler = &mockFileSystemHandler{
+				ExistsFunc: func(name string) (bool, error) {
+					return true, nil
+				},
+				ReadFileFunc: func(name string) ([]byte, error) {
+					return nil, errFoo
+				},
+			}
+			data, err := st.ReadContent(bid, cid)
+
+			assert.Nil(t, data)
+			assert.Error(t, err, ErrUnableToReadContent)
+		})
+	})
+
+	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+}
+
 type mockFileSystemHandler struct {
 	ExistsFunc    func(name string) (bool, error)
 	MkdirFunc     func(name string) error
@@ -342,6 +397,7 @@ type mockFileSystemHandler struct {
 	RemoveFunc    func(name string) error
 	CleanFunc     func(name string) error
 	WriteFileFunc func(name string, data []byte) error
+	ReadFileFunc  func(name string) ([]byte, error)
 }
 
 func (h *mockFileSystemHandler) Exists(name string) (bool, error) {
@@ -366,4 +422,8 @@ func (h *mockFileSystemHandler) Clean(name string) error {
 
 func (h *mockFileSystemHandler) WriteFile(name string, data []byte) error {
 	return h.WriteFileFunc(name, data)
+}
+
+func (h *mockFileSystemHandler) ReadFile(name string) ([]byte, error) {
+	return h.ReadFileFunc(name)
 }
