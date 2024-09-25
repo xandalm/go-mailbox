@@ -9,12 +9,13 @@ type fileSystemHandler interface {
 	Exists(string) (bool, error)
 	Mkdir(string) error
 	Ls(string) ([]string, error)
+	Remove(string) error
 }
 
 type defaulFileSystemHandler struct{}
 
-func (h *defaulFileSystemHandler) Exists(file string) (bool, error) {
-	if _, err := os.Stat(file); err == nil {
+func (h *defaulFileSystemHandler) Exists(name string) (bool, error) {
+	if _, err := os.Stat(name); err == nil {
 		return true, nil
 	} else if os.IsNotExist(err) {
 		return false, nil
@@ -23,12 +24,12 @@ func (h *defaulFileSystemHandler) Exists(file string) (bool, error) {
 	}
 }
 
-func (h *defaulFileSystemHandler) Mkdir(dirname string) error {
-	return os.Mkdir(dirname, 0666)
+func (h *defaulFileSystemHandler) Mkdir(name string) error {
+	return os.Mkdir(name, 0666)
 }
 
-func (h *defaulFileSystemHandler) Ls(dirname string) ([]string, error) {
-	f, err := os.Open(dirname)
+func (h *defaulFileSystemHandler) Ls(name string) ([]string, error) {
+	f, err := os.Open(name)
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +39,10 @@ func (h *defaulFileSystemHandler) Ls(dirname string) ([]string, error) {
 		return nil, err
 	}
 	return names, nil
+}
+
+func (h *defaulFileSystemHandler) Remove(name string) error {
+	return os.Remove(name)
 }
 
 type fileSystemStorage struct {
@@ -64,6 +69,14 @@ func (s *fileSystemStorage) ListBoxes() ([]string, Error) {
 	} else {
 		return ids, nil
 	}
+}
+
+func (s *fileSystemStorage) DeleteBox(id string) Error {
+	path := filepath.Join(s.path, id)
+	if err := s.handler.Remove(path); err != nil {
+		return ErrUnableToDeleteBox
+	}
+	return nil
 }
 
 func NewFileSystemStorage(path, dir string) *fileSystemStorage {

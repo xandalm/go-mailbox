@@ -34,15 +34,29 @@ func assertStorageFolderIsCreated(t *testing.T, st *fileSystemStorage) {
 	}
 }
 
+func isBoxFolderCreated(st *fileSystemStorage, bid string) bool {
+	if _, err := os.Stat(filepath.Join(st.path, bid)); err == nil {
+		return true
+	} else if os.IsNotExist(err) {
+		return false
+	}
+	log.Fatal("unable to check box folder existence")
+	return false
+}
+
 func assertBoxFolderIsCreated(t *testing.T, st *fileSystemStorage, bid string) {
 	t.Helper()
 
-	if _, err := os.Stat(filepath.Join(st.path, bid)); err == nil {
-		return
-	} else if os.IsNotExist(err) {
+	if !isBoxFolderCreated(st, bid) {
 		t.Fatal("box folder doesn't exist")
-	} else {
-		log.Fatal("unable to check box folder existence")
+	}
+}
+
+func assertBoxFolderWasDeleted(t *testing.T, st *fileSystemStorage, bid string) {
+	t.Helper()
+
+	if isBoxFolderCreated(st, bid) {
+		t.Fatal("box folder still exists")
 	}
 }
 
@@ -97,7 +111,7 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
-			ExistsFunc: func(file string) (bool, error) {
+			ExistsFunc: func(name string) (bool, error) {
 				return false, errFoo
 			},
 		}
@@ -127,7 +141,7 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
-			LsFunc: func(dirname string) ([]string, error) {
+			LsFunc: func(name string) ([]string, error) {
 				return nil, errFoo
 			},
 		}
@@ -141,20 +155,53 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
 }
 
+func TestFileSystemStorage_DeletingBox(t *testing.T) {
+	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
+	createStorageFolder(st)
+	createBoxFolder(st, "box_A")
+	createBoxFolder(st, "box_B")
+
+	t.Run("delete box from storage", func(t *testing.T) {
+		err := st.DeleteBox("box_A")
+
+		assert.Nil(t, err)
+		assertBoxFolderWasDeleted(t, st, "box_A")
+	})
+
+	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
+		st.handler = &mockFileSystemHandler{
+			RemoveFunc: func(name string) error {
+				return errFoo
+			},
+		}
+
+		err := st.DeleteBox("box_B")
+
+		assert.Error(t, err, ErrUnableToDeleteBox)
+	})
+
+	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+}
+
 type mockFileSystemHandler struct {
-	ExistsFunc func(file string) (bool, error)
-	MkdirFunc  func(dirname string) error
-	LsFunc     func(dirname string) ([]string, error)
+	ExistsFunc func(name string) (bool, error)
+	MkdirFunc  func(name string) error
+	LsFunc     func(name string) ([]string, error)
+	RemoveFunc func(name string) error
 }
 
-func (h *mockFileSystemHandler) Exists(file string) (bool, error) {
-	return h.ExistsFunc(file)
+func (h *mockFileSystemHandler) Exists(name string) (bool, error) {
+	return h.ExistsFunc(name)
 }
 
-func (h *mockFileSystemHandler) Mkdir(dirname string) error {
-	return h.MkdirFunc(dirname)
+func (h *mockFileSystemHandler) Mkdir(name string) error {
+	return h.MkdirFunc(name)
 }
 
-func (h *mockFileSystemHandler) Ls(dirname string) ([]string, error) {
-	return h.LsFunc(dirname)
+func (h *mockFileSystemHandler) Ls(name string) ([]string, error) {
+	return h.LsFunc(name)
+}
+
+func (h *mockFileSystemHandler) Remove(name string) error {
+	return h.RemoveFunc(name)
 }
