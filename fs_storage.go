@@ -11,6 +11,7 @@ type fileSystemHandler interface {
 	Ls(string) ([]string, error)
 	Remove(string) error
 	Clean(string) error
+	WriteFile(string, []byte) error
 }
 
 type defaulFileSystemHandler struct{}
@@ -60,6 +61,11 @@ func (h *defaulFileSystemHandler) Clean(name string) error {
 	return err
 }
 
+func (h *defaulFileSystemHandler) WriteFile(name string, data []byte) error {
+	os.WriteFile(name, data, 0666)
+	return nil
+}
+
 type fileSystemStorage struct {
 	handler fileSystemHandler
 	path    string
@@ -98,6 +104,21 @@ func (s *fileSystemStorage) CleanBox(id string) Error {
 	path := filepath.Join(s.path, id)
 	if err := s.handler.Clean(path); err != nil {
 		return ErrUnableToCleanBox
+	}
+	return nil
+}
+
+func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
+	path := filepath.Join(s.path, bid, cid)
+	exists, err := s.handler.Exists(path)
+	if err != nil {
+		return ErrUnableToPostContent
+	}
+	if exists {
+		return ErrRepeatedContentIdentifier
+	}
+	if err := s.handler.WriteFile(path, d); err != nil {
+		return ErrUnableToPostContent
 	}
 	return nil
 }

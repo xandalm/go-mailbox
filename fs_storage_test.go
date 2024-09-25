@@ -1,6 +1,7 @@
 package mailbox
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -44,14 +45,23 @@ func assertStorageFolderIsCreated(t *testing.T, st *fileSystemStorage) {
 	}
 }
 
-func isBoxFolderCreated(st *fileSystemStorage, bid string) bool {
-	if _, err := os.Stat(filepath.Join(st.path, bid)); err == nil {
+func exists(name, msg string) bool {
+	_, err := os.Stat(name)
+	if err == nil {
 		return true
 	} else if os.IsNotExist(err) {
 		return false
 	}
-	log.Fatal("unable to check box folder existence")
+	log.Fatal(msg, err)
 	return false
+}
+
+func isBoxFolderCreated(st *fileSystemStorage, bid string) bool {
+	return exists(filepath.Join(st.path, bid), "unable to check box folder existence")
+}
+
+func isContentFileCreated(st *fileSystemStorage, bid, cid string) bool {
+	return exists(filepath.Join(st.path, bid, cid), "unable to check content file existence")
 }
 
 func assertBoxFolderIsCreated(t *testing.T, st *fileSystemStorage, bid string) {
@@ -86,6 +96,34 @@ func assertBoxFolderIsEmpty(t *testing.T, st *fileSystemStorage, bid string) {
 		t.Fatal("box folder isn't empty")
 	} else if err != io.EOF {
 		log.Fatalf("unable to list names inside dir, %v", err)
+	}
+}
+
+func assertContentFileIsCreated(t *testing.T, st *fileSystemStorage, bid, cid string) {
+	t.Helper()
+
+	if !isContentFileCreated(st, bid, cid) {
+		t.Fatal("didn't create content file")
+	}
+}
+
+func assertContentFileDataIsEqual(t *testing.T, st *fileSystemStorage, bid, cid string, want []byte) {
+	t.Helper()
+
+	f, err := os.Open(filepath.Join(st.path, bid, cid))
+	if err != nil {
+		log.Fatalf("unable to open file, %v", err)
+		return
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		log.Fatalf("unable to read data from file, %v", err)
+	}
+
+	if !bytes.Equal(data, want) {
+		t.Fatalf("content file data is %v, but want %v", data, want)
 	}
 }
 
@@ -241,12 +279,69 @@ func TestFileSystemStorage_CleaningBox(t *testing.T) {
 	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
 }
 
+func TestFileSystemStorage_CreatingContent(t *testing.T) {
+	st := &fileSystemStorage{&defaulFileSystemHandler{}, filepath.Join(testPath, testDir)}
+	createStorageFolder(st)
+	createBoxFolder(st, "box_1")
+
+	t.Run("create content", func(t *testing.T) {
+		bid := "box_1"
+		cid := "data_1"
+		data := []byte("foo")
+		err := st.CreateContent(bid, cid, data)
+
+		assert.Nil(t, err)
+		assertContentFileIsCreated(t, st, bid, cid)
+		assertContentFileDataIsEqual(t, st, bid, cid, data)
+	})
+
+	createContentFile(st, "box_1", "data_2", []byte("bar"))
+
+	t.Run("returns error because id already exists", func(t *testing.T) {
+		err := st.CreateContent("box_1", "data_2", []byte("baz"))
+
+		assert.Error(t, err, ErrRepeatedContentIdentifier)
+	})
+
+	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
+		bid := "box_1"
+		cid := "data_3"
+		data := []byte("baz")
+		t.Run("unable to check id existence", func(t *testing.T) {
+			st.handler = &mockFileSystemHandler{
+				ExistsFunc: func(name string) (bool, error) {
+					return false, errFoo
+				},
+			}
+			err := st.CreateContent(bid, cid, data)
+
+			assert.Error(t, err, ErrUnableToPostContent)
+		})
+		t.Run("unable to write file", func(t *testing.T) {
+			st.handler = &mockFileSystemHandler{
+				ExistsFunc: func(name string) (bool, error) {
+					return false, nil
+				},
+				WriteFileFunc: func(name string, data []byte) error {
+					return errFoo
+				},
+			}
+			err := st.CreateContent(bid, cid, data)
+
+			assert.Error(t, err, ErrUnableToPostContent)
+		})
+	})
+
+	t.Cleanup(newCleanUpFileSystemStorageFunc(st.path))
+}
+
 type mockFileSystemHandler struct {
-	ExistsFunc func(name string) (bool, error)
-	MkdirFunc  func(name string) error
-	LsFunc     func(name string) ([]string, error)
-	RemoveFunc func(name string) error
-	CleanFunc  func(name string) error
+	ExistsFunc    func(name string) (bool, error)
+	MkdirFunc     func(name string) error
+	LsFunc        func(name string) ([]string, error)
+	RemoveFunc    func(name string) error
+	CleanFunc     func(name string) error
+	WriteFileFunc func(name string, data []byte) error
 }
 
 func (h *mockFileSystemHandler) Exists(name string) (bool, error) {
@@ -267,4 +362,8 @@ func (h *mockFileSystemHandler) Remove(name string) error {
 
 func (h *mockFileSystemHandler) Clean(name string) error {
 	return h.CleanFunc(name)
+}
+
+func (h *mockFileSystemHandler) WriteFile(name string, data []byte) error {
+	return h.WriteFileFunc(name, data)
 }
