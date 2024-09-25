@@ -88,9 +88,7 @@ type fileSystemStorage struct {
 
 func (s *fileSystemStorage) CreateBox(id string) Error {
 	path := filepath.Join(s.path, id)
-	if exists, err := s.handler.Exists(path); err != nil {
-		return ErrUnableToCreateBox
-	} else if exists {
+	if _, has := s.boxes[id]; has {
 		return ErrRepeatedBoxIdentifier
 	}
 	if err := s.handler.Mkdir(path); err != nil {
@@ -114,6 +112,13 @@ func (s *fileSystemStorage) ListBoxes() ([]string, Error) {
 
 func (s *fileSystemStorage) DeleteBox(id string) Error {
 	path := filepath.Join(s.path, id)
+	bf, has := s.boxes[id]
+	if !has {
+		return nil
+	}
+	if err := bf.Close(); err != nil {
+		return ErrUnableToDeleteBox
+	}
 	if err := s.handler.Remove(path); err != nil {
 		return ErrUnableToDeleteBox
 	}
@@ -121,6 +126,10 @@ func (s *fileSystemStorage) DeleteBox(id string) Error {
 }
 
 func (s *fileSystemStorage) CleanBox(id string) Error {
+	_, has := s.boxes[id]
+	if !has {
+		return nil
+	}
 	path := filepath.Join(s.path, id)
 	if err := s.handler.Clean(path); err != nil {
 		return ErrUnableToCleanBox

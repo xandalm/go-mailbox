@@ -11,13 +11,6 @@ import (
 	"github.com/xandalm/go-testing/assert"
 )
 
-func createStorageFolder(st *fileSystemStorage) {
-	err := os.MkdirAll(st.path, 0666)
-	if err != nil && !os.IsExist(err) {
-		log.Fatal("unable to create storage folder")
-	}
-}
-
 func createStorage(path, dir string) *fileSystemStorage {
 	path = filepath.Join(path, dir)
 	st := &fileSystemStorage{
@@ -25,15 +18,25 @@ func createStorage(path, dir string) *fileSystemStorage {
 		handler: &defaulFileSystemHandler{},
 		path:    path,
 	}
-	createStorageFolder(st)
+	err := os.MkdirAll(st.path, 0666)
+	if err != nil {
+		log.Fatal("unable to create storage folder")
+		return nil
+	}
 	st.f, _ = os.Open(path)
 	return st
 }
 
-func createBoxFolder(st *fileSystemStorage, bid string) {
-	if err := os.MkdirAll(filepath.Join(st.path, bid), 0666); err != nil {
+func createBox(st *fileSystemStorage, bid string) {
+	path := filepath.Join(st.path, bid)
+	if err := os.MkdirAll(path, 0666); err != nil {
 		log.Fatalf("unable to create box folder, %v", err)
 	}
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("unable to open box file, %v", err)
+	}
+	st.boxes[bid] = f
 }
 
 func createContentFile(st *fileSystemStorage, bid string, cid string, content []byte) {
@@ -197,7 +200,7 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 		assertBoxFolderIsCreated(t, st, "box_1")
 	})
 
-	createBoxFolder(st, "box_2")
+	createBox(st, "box_2")
 
 	t.Run("returns error because id already exists", func(t *testing.T) {
 
@@ -246,9 +249,9 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 func TestFileSystemStorage_ListingBox(t *testing.T) {
 	path := t.TempDir()
 	st := createStorage(path, testDir)
-	createBoxFolder(st, "box_A")
-	createBoxFolder(st, "box_B")
-	createBoxFolder(st, "box_C")
+	createBox(st, "box_A")
+	createBox(st, "box_B")
+	createBox(st, "box_C")
 
 	t.Run("returns list with id of all boxes in storage", func(t *testing.T) {
 		got, err := st.ListBoxes()
@@ -279,8 +282,8 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 func TestFileSystemStorage_DeletingBox(t *testing.T) {
 	path := t.TempDir()
 	st := createStorage(path, testDir)
-	createBoxFolder(st, "box_A")
-	createBoxFolder(st, "box_B")
+	createBox(st, "box_A")
+	createBox(st, "box_B")
 
 	t.Run("delete box from storage", func(t *testing.T) {
 		err := st.DeleteBox("box_A")
@@ -308,7 +311,7 @@ func TestFileSystemStorage_DeletingBox(t *testing.T) {
 func TestFileSystemStorage_CleaningBox(t *testing.T) {
 	path := t.TempDir()
 	st := createStorage(path, testDir)
-	createBoxFolder(st, "box_1")
+	createBox(st, "box_1")
 	createContentFile(st, "box_1", "data_1", []byte("foo"))
 	createContentFile(st, "box_1", "data_2", []byte("bar"))
 
@@ -338,7 +341,7 @@ func TestFileSystemStorage_CleaningBox(t *testing.T) {
 func TestFileSystemStorage_CreatingContent(t *testing.T) {
 	path := t.TempDir()
 	st := createStorage(path, testDir)
-	createBoxFolder(st, "box_1")
+	createBox(st, "box_1")
 
 	t.Run("create content", func(t *testing.T) {
 		bid := "box_1"
@@ -396,7 +399,7 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 func TestFileSystemStorage_ReadingContent(t *testing.T) {
 	path := t.TempDir()
 	st := createStorage(path, testDir)
-	createBoxFolder(st, "box_1")
+	createBox(st, "box_1")
 	createContentFile(st, "box_1", "data_1", []byte("foo"))
 
 	t.Run("read content", func(t *testing.T) {
