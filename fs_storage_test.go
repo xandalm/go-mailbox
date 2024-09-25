@@ -143,19 +143,16 @@ func newCleanUpStorageFunc(st *fileSystemStorage) func() {
 		if err := st.f.Close(); err != nil {
 			log.Fatal("unable to close storage file")
 		}
-		if err := os.RemoveAll(st.path); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
 	}
 }
 
 func TestNewFileSystemStorage(t *testing.T) {
+	path := t.TempDir()
 	dir := "tests_box-storage"
 	t.Run("create folder and return storage", func(t *testing.T) {
-		got := NewFileSystemStorage("", dir)
+		got := NewFileSystemStorage(path, dir)
 
 		assert.NotNil(t, got)
-		assert.NotNil(t, got.f)
 		assertStorageFolderIsCreated(t, got)
 
 		t.Cleanup(newCleanUpStorageFunc(got))
@@ -169,11 +166,11 @@ func TestNewFileSystemStorage(t *testing.T) {
 
 }
 
-var testPath = ""
 var testDir = "tests_box-storage"
 
 func TestFileSystemStorage_CreatingBox(t *testing.T) {
-	st := createStorage(testPath, testDir)
+	path := t.TempDir()
+	st := createStorage(path, testDir)
 
 	t.Run("create box in storage", func(t *testing.T) {
 		err := st.CreateBox("box_1")
@@ -206,7 +203,8 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 }
 
 func TestFileSystemStorage_ListingBox(t *testing.T) {
-	st := createStorage(testPath, testDir)
+	path := t.TempDir()
+	st := createStorage(path, testDir)
 	createBoxFolder(st, "box_A")
 	createBoxFolder(st, "box_B")
 	createBoxFolder(st, "box_C")
@@ -237,7 +235,8 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 }
 
 func TestFileSystemStorage_DeletingBox(t *testing.T) {
-	st := createStorage(testPath, testDir)
+	path := t.TempDir()
+	st := createStorage(path, testDir)
 	createBoxFolder(st, "box_A")
 	createBoxFolder(st, "box_B")
 
@@ -264,7 +263,8 @@ func TestFileSystemStorage_DeletingBox(t *testing.T) {
 }
 
 func TestFileSystemStorage_CleaningBox(t *testing.T) {
-	st := createStorage(testPath, testDir)
+	path := t.TempDir()
+	st := createStorage(path, testDir)
 	createBoxFolder(st, "box_1")
 	createContentFile(st, "box_1", "data_1", []byte("foo"))
 	createContentFile(st, "box_1", "data_2", []byte("bar"))
@@ -292,7 +292,8 @@ func TestFileSystemStorage_CleaningBox(t *testing.T) {
 }
 
 func TestFileSystemStorage_CreatingContent(t *testing.T) {
-	st := createStorage(testPath, testDir)
+	path := t.TempDir()
+	st := createStorage(path, testDir)
 	createBoxFolder(st, "box_1")
 
 	t.Run("create content", func(t *testing.T) {
@@ -347,7 +348,8 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 }
 
 func TestFileSystemStorage_ReadingContent(t *testing.T) {
-	st := createStorage(testPath, testDir)
+	path := t.TempDir()
+	st := createStorage(path, testDir)
 	createBoxFolder(st, "box_1")
 	createContentFile(st, "box_1", "data_1", []byte("foo"))
 
