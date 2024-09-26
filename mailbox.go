@@ -82,8 +82,6 @@ type Provider interface {
 type Bytes []byte
 
 type Box interface {
-	// Box identifier
-	Id() string
 	// Post content and return its identifier.
 	Post(string, Bytes) Error
 	// Read the content matching to the identifier.
@@ -114,10 +112,6 @@ type Storage interface {
 type box struct {
 	st Storage
 	id string
-}
-
-func (b *box) Id() string {
-	return b.id
 }
 
 func (b *box) Clean() Error {
