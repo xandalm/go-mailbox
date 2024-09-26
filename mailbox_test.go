@@ -106,3 +106,17 @@ func TestPostingInBox(t *testing.T) {
 		assert.Error(t, b.Post("data_1", []byte{}), ErrNothingToPost)
 	})
 }
+
+func TestReadingFromBox(t *testing.T) {
+	st := &stubStorage{
+		Boxes: []stubStorageBox{{"box_1", map[string]Bytes{"data_1": []byte("foo")}}},
+	}
+	b := &box{id: "box_1", st: st}
+
+	t.Run("returns content data", func(t *testing.T) {
+		data, err := b.Get("data_1")
+
+		assert.Nil(t, err)
+		assert.Equal(t, data, []byte("foo"))
+	})
+}
