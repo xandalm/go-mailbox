@@ -160,6 +160,10 @@ func (s *fileSystemStorage) CleanBox(id string) Error {
 
 func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
 	path := filepath.Join(s.path, bid, cid)
+	_, has := s.searchBoxPosition(bid)
+	if !has {
+		return ErrBoxNotFoundToPostContent
+	}
 	exists, err := s.handler.Exists(path)
 	if err != nil {
 		return ErrUnableToPostContent
@@ -175,6 +179,10 @@ func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
 
 func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
 	path := filepath.Join(s.path, bid, cid)
+	_, has := s.searchBoxPosition(bid)
+	if !has {
+		return nil, ErrBoxNotFoundToReadContent
+	}
 	exists, err := s.handler.Exists(path)
 	if err != nil {
 		return nil, ErrUnableToReadContent

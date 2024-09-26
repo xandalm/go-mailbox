@@ -368,6 +368,12 @@ func TestFileSystemStorage_CreatingContent(t *testing.T) {
 
 	createContentFile(st, "box_1", "data_2", []byte("bar"))
 
+	t.Run("returns error because box doesn't exist", func(t *testing.T) {
+		err := st.CreateContent("box_2", "data_2", []byte("baz"))
+
+		assert.Error(t, err, ErrBoxNotFoundToPostContent)
+	})
+
 	t.Run("returns error because id already exists", func(t *testing.T) {
 		err := st.CreateContent("box_1", "data_2", []byte("baz"))
 
@@ -421,6 +427,13 @@ func TestFileSystemStorage_ReadingContent(t *testing.T) {
 		assert.NotNil(t, got)
 		want := []byte("foo")
 		assert.Equal(t, got, want)
+	})
+
+	t.Run("returns error because box doesn't exist", func(t *testing.T) {
+		data, err := st.ReadContent("box_2", "data_2")
+
+		assert.Nil(t, data)
+		assert.Error(t, err, ErrBoxNotFoundToReadContent)
 	})
 
 	t.Run("returns error because content file doesn't exist", func(t *testing.T) {
