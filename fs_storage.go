@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 )
 
 type boxInfo struct {
@@ -13,6 +14,7 @@ type boxInfo struct {
 }
 
 type fileSystemStorage struct {
+	mu        sync.RWMutex
 	f         *os.File
 	boxesInfo []*boxInfo
 }
@@ -24,6 +26,9 @@ func (s *fileSystemStorage) searchBoxPosition(id string) (int, bool) {
 }
 
 func (s *fileSystemStorage) CreateBox(id string) Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	path := filepath.Join(s.f.Name(), id)
 	pos, has := s.searchBoxPosition(id)
 	if has {
@@ -44,6 +49,9 @@ func (s *fileSystemStorage) CreateBox(id string) Error {
 }
 
 func (s *fileSystemStorage) ListBoxes() ([]string, Error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	ids := []string{}
 	for _, box := range s.boxesInfo {
 		ids = append(ids, box.id)
@@ -52,6 +60,9 @@ func (s *fileSystemStorage) ListBoxes() ([]string, Error) {
 }
 
 func (s *fileSystemStorage) DeleteBox(id string) Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	pos, has := s.searchBoxPosition(id)
 	if !has {
 		return nil
@@ -65,6 +76,9 @@ func (s *fileSystemStorage) DeleteBox(id string) Error {
 }
 
 func (s *fileSystemStorage) CleanBox(id string) Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	pos, has := s.searchBoxPosition(id)
 	if !has {
 		return nil
@@ -85,6 +99,9 @@ func (s *fileSystemStorage) CleanBox(id string) Error {
 }
 
 func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	_, has := s.searchBoxPosition(bid)
 	if !has {
 		return ErrBoxNotFoundToPostContent
@@ -102,6 +119,9 @@ func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
 }
 
 func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	_, has := s.searchBoxPosition(bid)
 	if !has {
 		return nil, ErrBoxNotFoundToReadContent
