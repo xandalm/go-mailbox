@@ -12,6 +12,7 @@ type fileSystemHandler interface {
 	Exists(string) (bool, error)
 	Mkdir(string) error
 	Remove(string) error
+	RemoveAll(string) error
 	Clean(*os.File) error
 	WriteFile(string, []byte) error
 	ReadFile(string) ([]byte, error)
@@ -43,6 +44,10 @@ func (h *defaulFileSystemHandler) Mkdir(name string) error {
 
 func (h *defaulFileSystemHandler) Remove(name string) error {
 	return os.Remove(name)
+}
+
+func (h *defaulFileSystemHandler) RemoveAll(name string) error {
+	return os.RemoveAll(name)
 }
 
 func (h *defaulFileSystemHandler) Clean(dir *os.File) error {
@@ -118,7 +123,7 @@ func (s *fileSystemStorage) DeleteBox(id string) Error {
 		return nil
 	}
 	box := s.boxesInfo[pos]
-	if box.f.Close() != nil || s.handler.Remove(box.f.Name()) != nil {
+	if box.f.Close() != nil || s.handler.RemoveAll(box.f.Name()) != nil {
 		return ErrUnableToDeleteBox
 	}
 	s.boxesInfo = slices.Delete(s.boxesInfo, pos, pos+1)

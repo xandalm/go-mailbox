@@ -273,6 +273,8 @@ func TestFileSystemStorage_DeletingBox(t *testing.T) {
 	st := createStorage(path, testDir)
 	createBox(st, "box_A")
 	createBox(st, "box_B")
+	createBox(st, "box_C")
+	createContentFile(st, "box_B", "data_1", []byte("foo"))
 
 	t.Run("delete box from storage", func(t *testing.T) {
 		err := st.DeleteBox("box_A")
@@ -281,15 +283,22 @@ func TestFileSystemStorage_DeletingBox(t *testing.T) {
 		assertBoxFolderWasDeleted(t, st, "box_A")
 	})
 
+	t.Run("delete box and its contents", func(t *testing.T) {
+		err := st.DeleteBox("box_B")
+
+		assert.Nil(t, err)
+		assertBoxFolderWasDeleted(t, st, "box_B")
+	})
+
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
 			OpenFunc: dummyOpenFunc,
-			RemoveFunc: func(name string) error {
+			RemoveAllFunc: func(name string) error {
 				return errFoo
 			},
 		}
 
-		err := st.DeleteBox("box_B")
+		err := st.DeleteBox("box_C")
 
 		assert.Error(t, err, ErrUnableToDeleteBox)
 	})
@@ -464,6 +473,7 @@ type mockFileSystemHandler struct {
 	ExistsFunc    func(name string) (bool, error)
 	MkdirFunc     func(name string) error
 	RemoveFunc    func(name string) error
+	RemoveAllFunc func(name string) error
 	CleanFunc     func(dir *os.File) error
 	WriteFileFunc func(name string, data []byte) error
 	ReadFileFunc  func(name string) ([]byte, error)
@@ -483,6 +493,10 @@ func (h *mockFileSystemHandler) Mkdir(name string) error {
 
 func (h *mockFileSystemHandler) Remove(name string) error {
 	return h.RemoveFunc(name)
+}
+
+func (h *mockFileSystemHandler) RemoveAll(name string) error {
+	return h.RemoveAllFunc(name)
 }
 
 func (h *mockFileSystemHandler) Clean(dir *os.File) error {
