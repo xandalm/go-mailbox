@@ -102,11 +102,11 @@ func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	_, has := s.searchBoxPosition(bid)
+	pos, has := s.searchBoxPosition(bid)
 	if !has {
 		return ErrBoxNotFoundToPostContent
 	}
-	path := filepath.Join(s.f.Name(), bid, cid)
+	path := filepath.Join(s.boxesInfo[pos].f.Name(), cid)
 	if _, err := os.Stat(path); err == nil {
 		return ErrRepeatedContentIdentifier
 	} else if !os.IsNotExist(err) {
@@ -122,11 +122,11 @@ func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	_, has := s.searchBoxPosition(bid)
+	pos, has := s.searchBoxPosition(bid)
 	if !has {
 		return nil, ErrBoxNotFoundToReadContent
 	}
-	path := filepath.Join(s.f.Name(), bid, cid)
+	path := filepath.Join(s.boxesInfo[pos].f.Name(), cid)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, ErrContentNotFound
 	} else if err != nil {
@@ -137,6 +137,21 @@ func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
 		return nil, ErrUnableToReadContent
 	}
 	return data, nil
+}
+
+func (s *fileSystemStorage) DeleteContent(bid, cid string) Error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	pos, has := s.searchBoxPosition(bid)
+	if !has {
+		return nil
+	}
+	path := filepath.Join(s.boxesInfo[pos].f.Name(), cid)
+	if err := os.Remove(path); err != nil {
+		return ErrUnableToDeleteContent
+	}
+	return nil
 }
 
 func NewFileSystemStorage(path, dir string) *fileSystemStorage {

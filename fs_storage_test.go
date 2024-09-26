@@ -79,6 +79,10 @@ func isBoxFolderCreated(st *fileSystemStorage, bid string) bool {
 }
 
 func isContentFileCreated(st *fileSystemStorage, bid, cid string) bool {
+	if !isBoxFolderCreated(st, bid) {
+		log.Fatal("not even the box folder exists")
+		return false
+	}
 	return exists(filepath.Join(st.f.Name(), bid, cid), "unable to check content file existence")
 }
 
@@ -122,6 +126,14 @@ func assertContentFileIsCreated(t *testing.T, st *fileSystemStorage, bid, cid st
 
 	if !isContentFileCreated(st, bid, cid) {
 		t.Fatal("didn't create content file")
+	}
+}
+
+func assertContentFileWasDeleted(t *testing.T, st *fileSystemStorage, bid, cid string) {
+	t.Helper()
+
+	if isContentFileCreated(st, bid, cid) {
+		t.Fatal("didn't delete content file")
 	}
 }
 
@@ -335,6 +347,22 @@ func TestFileSystemStorage_ReadingContent(t *testing.T) {
 
 		assert.Nil(t, data)
 		assert.Error(t, err, ErrContentNotFound)
+	})
+
+	t.Cleanup(newCleanUpStorageFunc(st))
+}
+
+func TestFileSystemStorage_DeletingContent(t *testing.T) {
+	path := t.TempDir()
+	st := createStorage(path, testDir)
+	createBox(st, "box_1")
+	createContentFile(st, "box_1", "data_1", []byte("foo"))
+
+	t.Run("delete content", func(t *testing.T) {
+		err := st.DeleteContent("box_1", "data_1")
+
+		assert.Nil(t, err)
+		assertContentFileWasDeleted(t, st, "box_1", "data_1")
 	})
 
 	t.Cleanup(newCleanUpStorageFunc(st))
