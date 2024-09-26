@@ -119,6 +119,13 @@ func TestReadingFromBox(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, data, []byte("foo"))
 	})
+
+	t.Run("returns error because empty id", func(t *testing.T) {
+		data, err := b.Get("")
+
+		assert.Nil(t, data)
+		assert.Error(t, err, ErrEmptyContentIdentifier)
+	})
 }
 
 func TestDeletingFromBox(t *testing.T) {
@@ -136,16 +143,23 @@ func TestDeletingFromBox(t *testing.T) {
 	}
 	b := &box{id: "box_1", st: st}
 
-	t.Run("remove content", func(t *testing.T) {
-		cid := "data_1"
-		err := b.Delete(cid)
+	t.Run("removing single", func(t *testing.T) {
+		t.Run("remove content", func(t *testing.T) {
+			cid := "data_1"
+			err := b.Delete(cid)
 
-		assert.Nil(t, err)
-		if _, ok := st.Boxes[0].content[cid]; ok {
-			t.Fatal("didn't delete content")
-		}
+			assert.Nil(t, err)
+			if _, ok := st.Boxes[0].content[cid]; ok {
+				t.Fatal("didn't delete content")
+			}
+		})
+
+		t.Run("returns error because empty id", func(t *testing.T) {
+			err := b.Delete("")
+
+			assert.Error(t, err, ErrEmptyContentIdentifier)
+		})
 	})
-
 	t.Run("remove all content", func(t *testing.T) {
 		err := b.Clean()
 

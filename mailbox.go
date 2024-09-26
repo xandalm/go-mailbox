@@ -125,10 +125,16 @@ func (b *box) Clean() Error {
 }
 
 func (b *box) Delete(id string) Error {
+	if id == "" {
+		return ErrEmptyContentIdentifier
+	}
 	return b.st.DeleteContent(b.id, id)
 }
 
 func (b *box) Get(id string) (Bytes, Error) {
+	if id == "" {
+		return nil, ErrEmptyContentIdentifier
+	}
 	return b.st.ReadContent(b.id, id)
 }
 
