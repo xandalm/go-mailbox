@@ -2,10 +2,13 @@ package mailbox
 
 import (
 	"bytes"
+	"container/list"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/xandalm/go-testing/assert"
@@ -14,9 +17,9 @@ import (
 func createStorage(path, dir string) *fileSystemStorage {
 	path = filepath.Join(path, dir)
 	st := &fileSystemStorage{
-		boxes:   make(map[string]*os.File),
-		handler: &defaulFileSystemHandler{},
-		path:    path,
+		boxFiles: list.New(),
+		handler:  &defaulFileSystemHandler{},
+		path:     path,
 	}
 	err := os.MkdirAll(st.path, 0666)
 	if err != nil {
@@ -36,7 +39,11 @@ func createBox(st *fileSystemStorage, bid string) {
 	if err != nil {
 		log.Fatalf("unable to open box file, %v", err)
 	}
-	st.boxes[bid] = f
+	e := st.boxFiles.PushBack(f)
+	pos, _ := slices.BinarySearchFunc(st.boxFilesIdx, bid, func(e *idxNode, id string) int {
+		return strings.Compare(e.id, id)
+	})
+	st.boxFilesIdx = slices.Insert(st.boxFilesIdx, pos, &idxNode{bid, e})
 }
 
 func createContentFile(st *fileSystemStorage, bid string, cid string, content []byte) {
@@ -147,8 +154,13 @@ func newCleanUpStorageFunc(st *fileSystemStorage) func() {
 		if st.f == nil {
 			return
 		}
-		for _, f := range st.boxes {
-			f.Close()
+		boxFile := st.boxFiles.Front()
+		for {
+			if boxFile == nil {
+				break
+			}
+			boxFile.Value.(*os.File).Close()
+			boxFile = boxFile.Next()
 		}
 		if err := st.f.Close(); err != nil {
 			log.Fatal("unable to close storage file")
@@ -164,7 +176,8 @@ func TestNewFileSystemStorage(t *testing.T) {
 
 		assert.NotNil(t, got)
 		assert.NotNil(t, got.f)
-		assert.NotNil(t, got.boxes)
+		assert.NotNil(t, got.boxFiles)
+		assert.NotNil(t, got.boxFilesIdx)
 		assert.Equal(t, got.path, filepath.Join(path, dir))
 
 		assertStorageFolderIsCreated(t, got)
@@ -190,12 +203,11 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 		err := st.CreateBox("box_1")
 
 		assert.Nil(t, err)
-		bf, ok := st.boxes["box_1"]
-		if !ok {
+		_, has := slices.BinarySearchFunc(st.boxFilesIdx, "box_1", func(e *idxNode, id string) int {
+			return strings.Compare(e.id, id)
+		})
+		if !has {
 			t.Fatal("didn't create box in storage")
-		}
-		if bf == nil {
-			t.Fatal("didn't keep box file open in storage")
 		}
 		assertBoxFolderIsCreated(t, st, "box_1")
 	})
