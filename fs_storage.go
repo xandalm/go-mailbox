@@ -7,71 +7,6 @@ import (
 	"strings"
 )
 
-type fileSystemHandler interface {
-	Open(string) (*os.File, error)
-	Exists(string) (bool, error)
-	Mkdir(string) error
-	Remove(string) error
-	RemoveAll(string) error
-	Clean(*os.File) error
-	WriteFile(string, []byte) error
-	ReadFile(string) ([]byte, error)
-}
-
-type defaulFileSystemHandler struct{}
-
-func (h *defaulFileSystemHandler) Open(name string) (*os.File, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	return f, nil
-}
-
-func (h *defaulFileSystemHandler) Exists(name string) (bool, error) {
-	if _, err := os.Stat(name); err == nil {
-		return true, nil
-	} else if os.IsNotExist(err) {
-		return false, nil
-	} else {
-		return false, err
-	}
-}
-
-func (h *defaulFileSystemHandler) Mkdir(name string) error {
-	return os.Mkdir(name, 0666)
-}
-
-func (h *defaulFileSystemHandler) Remove(name string) error {
-	return os.Remove(name)
-}
-
-func (h *defaulFileSystemHandler) RemoveAll(name string) error {
-	return os.RemoveAll(name)
-}
-
-func (h *defaulFileSystemHandler) Clean(dir *os.File) error {
-	names, err := dir.Readdirnames(0)
-	if err != nil {
-		return err
-	}
-	for _, n := range names {
-		err = h.Remove(filepath.Join(dir.Name(), n))
-		if err != nil {
-			break
-		}
-	}
-	return err
-}
-
-func (h *defaulFileSystemHandler) WriteFile(name string, data []byte) error {
-	return os.WriteFile(name, data, 0666)
-}
-
-func (h *defaulFileSystemHandler) ReadFile(name string) ([]byte, error) {
-	return os.ReadFile(name)
-}
-
 type boxInfo struct {
 	id string
 	f  *os.File
@@ -80,7 +15,6 @@ type boxInfo struct {
 type fileSystemStorage struct {
 	f         *os.File
 	boxesInfo []*boxInfo
-	handler   fileSystemHandler
 }
 
 func (s *fileSystemStorage) searchBoxPosition(id string) (int, bool) {
@@ -95,10 +29,10 @@ func (s *fileSystemStorage) CreateBox(id string) Error {
 	if has {
 		return ErrRepeatedBoxIdentifier
 	}
-	if err := s.handler.Mkdir(path); err != nil {
+	if err := os.Mkdir(path, 0666); err != nil {
 		return ErrUnableToCreateBox
 	}
-	if f, err := s.handler.Open(path); err == nil {
+	if f, err := os.Open(path); err == nil {
 		s.boxesInfo = slices.Insert(
 			s.boxesInfo,
 			pos,
@@ -123,7 +57,7 @@ func (s *fileSystemStorage) DeleteBox(id string) Error {
 		return nil
 	}
 	box := s.boxesInfo[pos]
-	if box.f.Close() != nil || s.handler.RemoveAll(box.f.Name()) != nil {
+	if box.f.Close() != nil || os.RemoveAll(box.f.Name()) != nil {
 		return ErrUnableToDeleteBox
 	}
 	s.boxesInfo = slices.Delete(s.boxesInfo, pos, pos+1)
@@ -135,45 +69,50 @@ func (s *fileSystemStorage) CleanBox(id string) Error {
 	if !has {
 		return nil
 	}
-	if err := s.handler.Clean(s.boxesInfo[pos].f); err != nil {
+	f := s.boxesInfo[pos].f
+	contents, err := f.Readdirnames(0)
+	if err != nil {
+		return ErrUnableToCleanBox
+	}
+	for _, c := range contents {
+		err = os.Remove(filepath.Join(f.Name(), c))
+		if err == nil {
+			continue
+		}
 		return ErrUnableToCleanBox
 	}
 	return nil
 }
 
 func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
-	path := filepath.Join(s.f.Name(), bid, cid)
 	_, has := s.searchBoxPosition(bid)
 	if !has {
 		return ErrBoxNotFoundToPostContent
 	}
-	exists, err := s.handler.Exists(path)
-	if err != nil {
+	path := filepath.Join(s.f.Name(), bid, cid)
+	if _, err := os.Stat(path); err == nil {
+		return ErrRepeatedContentIdentifier
+	} else if !os.IsNotExist(err) {
 		return ErrUnableToPostContent
 	}
-	if exists {
-		return ErrRepeatedContentIdentifier
-	}
-	if err := s.handler.WriteFile(path, d); err != nil {
+	if err := os.WriteFile(path, d, 0666); err != nil {
 		return ErrUnableToPostContent
 	}
 	return nil
 }
 
 func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
-	path := filepath.Join(s.f.Name(), bid, cid)
 	_, has := s.searchBoxPosition(bid)
 	if !has {
 		return nil, ErrBoxNotFoundToReadContent
 	}
-	exists, err := s.handler.Exists(path)
-	if err != nil {
+	path := filepath.Join(s.f.Name(), bid, cid)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil, ErrContentNotFound
+	} else if err != nil {
 		return nil, ErrUnableToReadContent
 	}
-	if !exists {
-		return nil, ErrContentNotFound
-	}
-	data, err := s.handler.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, ErrUnableToReadContent
 	}
@@ -199,6 +138,5 @@ func NewFileSystemStorage(path, dir string) *fileSystemStorage {
 	return &fileSystemStorage{
 		f:         f,
 		boxesInfo: []*boxInfo{},
-		handler:   &defaulFileSystemHandler{},
 	}
 }
