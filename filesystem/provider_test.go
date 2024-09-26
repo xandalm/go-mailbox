@@ -10,8 +10,22 @@ import (
 	"github.com/xandalm/go-testing/assert"
 )
 
+func newCleanUpFunc(p *provider) func() {
+	return func() {
+		if p == nil {
+			return
+		}
+		if p.f != nil {
+			p.f.Close()
+		}
+		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
+			log.Fatal("unable to remove residual data")
+		}
+	}
+}
+
 func TestNewProvider(t *testing.T) {
-	path := ""
+	path := t.TempDir()
 	dir := "Mailbox"
 
 	got := NewProvider(path, dir)
@@ -25,18 +39,11 @@ func TestNewProvider(t *testing.T) {
 		t.Errorf("got provider path %s, but want %s", got.path, wantPath)
 	}
 
-	t.Cleanup(func() {
-		if got.f != nil {
-			got.f.Close()
-		}
-		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(got))
 }
 
 func TestProvider_Create(t *testing.T) {
-	path := ""
+	path := t.TempDir()
 	dir := "Mailbox"
 	p := NewProvider(path, dir)
 
@@ -70,15 +77,11 @@ func TestProvider_Create(t *testing.T) {
 		assert.Error(t, got, ErrRepeatedBoxIdentifier)
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
 
 func TestProvider_Get(t *testing.T) {
-	path := ""
+	path := t.TempDir()
 	dir := "Mailbox"
 	p := NewProvider(path, dir)
 
@@ -99,15 +102,11 @@ func TestProvider_Get(t *testing.T) {
 		assert.Error(t, got, ErrBoxNotFound)
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
 
 func TestProvider_Delete(t *testing.T) {
-	path := ""
+	path := t.TempDir()
 	dir := "Mailbox"
 	p := NewProvider(path, dir)
 
@@ -124,15 +123,11 @@ func TestProvider_Delete(t *testing.T) {
 		}
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
 
 func TestProvider_List(t *testing.T) {
-	path := ""
+	path := t.TempDir()
 	dir := "Mailbox"
 	p := NewProvider(path, dir)
 
@@ -148,9 +143,5 @@ func TestProvider_List(t *testing.T) {
 		assert.Contains(t, got, "box_2")
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
