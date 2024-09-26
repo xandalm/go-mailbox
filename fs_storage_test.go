@@ -2,7 +2,6 @@ package mailbox
 
 import (
 	"bytes"
-	"container/list"
 	"io"
 	"log"
 	"os"
@@ -17,11 +16,10 @@ import (
 func createStorage(path, dir string) *fileSystemStorage {
 	path = filepath.Join(path, dir)
 	st := &fileSystemStorage{
-		boxFiles: list.New(),
-		handler:  &defaulFileSystemHandler{},
-		path:     path,
+		boxesInfo: []*boxInfo{},
+		handler:   &defaulFileSystemHandler{},
 	}
-	err := os.MkdirAll(st.path, 0666)
+	err := os.MkdirAll(path, 0666)
 	if err != nil {
 		log.Fatal("unable to create storage folder")
 		return nil
@@ -31,7 +29,7 @@ func createStorage(path, dir string) *fileSystemStorage {
 }
 
 func createBox(st *fileSystemStorage, bid string) {
-	path := filepath.Join(st.path, bid)
+	path := filepath.Join(st.f.Name(), bid)
 	if err := os.MkdirAll(path, 0666); err != nil {
 		log.Fatalf("unable to create box folder, %v", err)
 	}
@@ -39,15 +37,14 @@ func createBox(st *fileSystemStorage, bid string) {
 	if err != nil {
 		log.Fatalf("unable to open box file, %v", err)
 	}
-	e := st.boxFiles.PushBack(f)
-	pos, _ := slices.BinarySearchFunc(st.boxFilesIdx, bid, func(e *idxNode, id string) int {
+	pos, _ := slices.BinarySearchFunc(st.boxesInfo, bid, func(e *boxInfo, id string) int {
 		return strings.Compare(e.id, id)
 	})
-	st.boxFilesIdx = slices.Insert(st.boxFilesIdx, pos, &idxNode{bid, e})
+	st.boxesInfo = slices.Insert(st.boxesInfo, pos, &boxInfo{bid, f})
 }
 
 func createContentFile(st *fileSystemStorage, bid string, cid string, content []byte) {
-	f, err := os.OpenFile(filepath.Join(st.path, bid, cid), os.O_CREATE|os.O_RDWR, 0666)
+	f, err := os.OpenFile(filepath.Join(st.f.Name(), bid, cid), os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatalf("unable to create content file, %v", err)
 	}
@@ -58,7 +55,7 @@ func createContentFile(st *fileSystemStorage, bid string, cid string, content []
 func assertStorageFolderIsCreated(t *testing.T, st *fileSystemStorage) {
 	t.Helper()
 
-	if _, err := os.Stat(st.path); err == nil {
+	if _, err := os.Stat(st.f.Name()); err == nil {
 		return
 	} else if os.IsNotExist(err) {
 		t.Fatal("storage folder doesn't exist")
@@ -79,11 +76,11 @@ func exists(name, msg string) bool {
 }
 
 func isBoxFolderCreated(st *fileSystemStorage, bid string) bool {
-	return exists(filepath.Join(st.path, bid), "unable to check box folder existence")
+	return exists(filepath.Join(st.f.Name(), bid), "unable to check box folder existence")
 }
 
 func isContentFileCreated(st *fileSystemStorage, bid, cid string) bool {
-	return exists(filepath.Join(st.path, bid, cid), "unable to check content file existence")
+	return exists(filepath.Join(st.f.Name(), bid, cid), "unable to check content file existence")
 }
 
 func assertBoxFolderIsCreated(t *testing.T, st *fileSystemStorage, bid string) {
@@ -105,7 +102,7 @@ func assertBoxFolderWasDeleted(t *testing.T, st *fileSystemStorage, bid string) 
 func assertBoxFolderIsEmpty(t *testing.T, st *fileSystemStorage, bid string) {
 	t.Helper()
 
-	f, err := os.Open(filepath.Join(st.path, bid))
+	f, err := os.Open(filepath.Join(st.f.Name(), bid))
 	if err != nil {
 		if os.IsNotExist(err) {
 			t.Fatal("box folder doesn't even exist")
@@ -132,7 +129,7 @@ func assertContentFileIsCreated(t *testing.T, st *fileSystemStorage, bid, cid st
 func assertContentFileDataIsEqual(t *testing.T, st *fileSystemStorage, bid, cid string, want []byte) {
 	t.Helper()
 
-	f, err := os.Open(filepath.Join(st.path, bid, cid))
+	f, err := os.Open(filepath.Join(st.f.Name(), bid, cid))
 	if err != nil {
 		log.Fatalf("unable to open file, %v", err)
 		return
@@ -154,13 +151,8 @@ func newCleanUpStorageFunc(st *fileSystemStorage) func() {
 		if st.f == nil {
 			return
 		}
-		boxFile := st.boxFiles.Front()
-		for {
-			if boxFile == nil {
-				break
-			}
-			boxFile.Value.(*os.File).Close()
-			boxFile = boxFile.Next()
+		for _, box := range st.boxesInfo {
+			box.f.Close()
 		}
 		if err := st.f.Close(); err != nil {
 			log.Fatal("unable to close storage file")
@@ -176,9 +168,8 @@ func TestNewFileSystemStorage(t *testing.T) {
 
 		assert.NotNil(t, got)
 		assert.NotNil(t, got.f)
-		assert.NotNil(t, got.boxFiles)
-		assert.NotNil(t, got.boxFilesIdx)
-		assert.Equal(t, got.path, filepath.Join(path, dir))
+		assert.Equal(t, got.f.Name(), filepath.Join(path, dir))
+		assert.NotNil(t, got.boxesInfo)
 
 		assertStorageFolderIsCreated(t, got)
 
@@ -203,7 +194,7 @@ func TestFileSystemStorage_CreatingBox(t *testing.T) {
 		err := st.CreateBox("box_1")
 
 		assert.Nil(t, err)
-		_, has := slices.BinarySearchFunc(st.boxFilesIdx, "box_1", func(e *idxNode, id string) int {
+		_, has := slices.BinarySearchFunc(st.boxesInfo, "box_1", func(e *boxInfo, id string) int {
 			return strings.Compare(e.id, id)
 		})
 		if !has {
@@ -274,20 +265,6 @@ func TestFileSystemStorage_ListingBox(t *testing.T) {
 		assert.Contains(t, got, "box_C")
 	})
 
-	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
-		st.handler = &mockFileSystemHandler{
-			OpenFunc: dummyOpenFunc,
-			LsFunc: func(name string) ([]string, error) {
-				return nil, errFoo
-			},
-		}
-
-		boxes, err := st.ListBoxes()
-
-		assert.Nil(t, boxes)
-		assert.Error(t, err, ErrUnableToListBoxes)
-	})
-
 	t.Cleanup(newCleanUpStorageFunc(st))
 }
 
@@ -337,7 +314,7 @@ func TestFileSystemStorage_CleaningBox(t *testing.T) {
 	t.Run("returns error because unexpected/internal error", func(t *testing.T) {
 		st.handler = &mockFileSystemHandler{
 			OpenFunc: dummyOpenFunc,
-			CleanFunc: func(name string) error {
+			CleanFunc: func(dir *os.File) error {
 				return errFoo
 			},
 		}
@@ -486,9 +463,8 @@ type mockFileSystemHandler struct {
 	OpenFunc      func(name string) (*os.File, error)
 	ExistsFunc    func(name string) (bool, error)
 	MkdirFunc     func(name string) error
-	LsFunc        func(name string) ([]string, error)
 	RemoveFunc    func(name string) error
-	CleanFunc     func(name string) error
+	CleanFunc     func(dir *os.File) error
 	WriteFileFunc func(name string, data []byte) error
 	ReadFileFunc  func(name string) ([]byte, error)
 }
@@ -505,16 +481,12 @@ func (h *mockFileSystemHandler) Mkdir(name string) error {
 	return h.MkdirFunc(name)
 }
 
-func (h *mockFileSystemHandler) Ls(name string) ([]string, error) {
-	return h.LsFunc(name)
-}
-
 func (h *mockFileSystemHandler) Remove(name string) error {
 	return h.RemoveFunc(name)
 }
 
-func (h *mockFileSystemHandler) Clean(name string) error {
-	return h.CleanFunc(name)
+func (h *mockFileSystemHandler) Clean(dir *os.File) error {
+	return h.CleanFunc(dir)
 }
 
 func (h *mockFileSystemHandler) WriteFile(name string, data []byte) error {

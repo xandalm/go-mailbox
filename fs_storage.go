@@ -1,7 +1,6 @@
 package mailbox
 
 import (
-	"container/list"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,9 +11,8 @@ type fileSystemHandler interface {
 	Open(string) (*os.File, error)
 	Exists(string) (bool, error)
 	Mkdir(string) error
-	Ls(string) ([]string, error)
 	Remove(string) error
-	Clean(string) error
+	Clean(*os.File) error
 	WriteFile(string, []byte) error
 	ReadFile(string) ([]byte, error)
 }
@@ -43,30 +41,17 @@ func (h *defaulFileSystemHandler) Mkdir(name string) error {
 	return os.Mkdir(name, 0666)
 }
 
-func (h *defaulFileSystemHandler) Ls(name string) ([]string, error) {
-	f, err := os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	names, err := f.Readdirnames(0)
-	if err != nil {
-		return nil, err
-	}
-	return names, nil
-}
-
 func (h *defaulFileSystemHandler) Remove(name string) error {
 	return os.Remove(name)
 }
 
-func (h *defaulFileSystemHandler) Clean(name string) error {
-	names, err := h.Ls(name)
+func (h *defaulFileSystemHandler) Clean(dir *os.File) error {
+	names, err := dir.Readdirnames(0)
 	if err != nil {
 		return err
 	}
 	for _, n := range names {
-		err = h.Remove(filepath.Join(name, n))
+		err = h.Remove(filepath.Join(dir.Name(), n))
 		if err != nil {
 			break
 		}
@@ -82,27 +67,25 @@ func (h *defaulFileSystemHandler) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(name)
 }
 
-type idxNode struct {
+type boxInfo struct {
 	id string
-	e  *list.Element
+	f  *os.File
 }
 
 type fileSystemStorage struct {
-	f           *os.File
-	boxFiles    *list.List
-	boxFilesIdx []*idxNode
-	handler     fileSystemHandler
-	path        string
+	f         *os.File
+	boxesInfo []*boxInfo
+	handler   fileSystemHandler
 }
 
 func (s *fileSystemStorage) searchBoxPosition(id string) (int, bool) {
-	return slices.BinarySearchFunc(s.boxFilesIdx, id, func(e *idxNode, id string) int {
+	return slices.BinarySearchFunc(s.boxesInfo, id, func(e *boxInfo, id string) int {
 		return strings.Compare(e.id, id)
 	})
 }
 
 func (s *fileSystemStorage) CreateBox(id string) Error {
-	path := filepath.Join(s.path, id)
+	path := filepath.Join(s.f.Name(), id)
 	pos, has := s.searchBoxPosition(id)
 	if has {
 		return ErrRepeatedBoxIdentifier
@@ -111,11 +94,10 @@ func (s *fileSystemStorage) CreateBox(id string) Error {
 		return ErrUnableToCreateBox
 	}
 	if f, err := s.handler.Open(path); err == nil {
-		e := s.boxFiles.PushBack(f)
-		s.boxFilesIdx = slices.Insert(
-			s.boxFilesIdx,
+		s.boxesInfo = slices.Insert(
+			s.boxesInfo,
 			pos,
-			&idxNode{id, e},
+			&boxInfo{id, f},
 		)
 		return nil
 	}
@@ -123,43 +105,39 @@ func (s *fileSystemStorage) CreateBox(id string) Error {
 }
 
 func (s *fileSystemStorage) ListBoxes() ([]string, Error) {
-	if ids, err := s.handler.Ls(s.path); err != nil {
-		return nil, ErrUnableToListBoxes
-	} else {
-		return ids, nil
+	ids := []string{}
+	for _, box := range s.boxesInfo {
+		ids = append(ids, box.id)
 	}
+	return ids, nil
 }
 
 func (s *fileSystemStorage) DeleteBox(id string) Error {
-	path := filepath.Join(s.path, id)
 	pos, has := s.searchBoxPosition(id)
 	if !has {
 		return nil
 	}
-	node := s.boxFilesIdx[pos]
-	bf := node.e.Value.(*os.File)
-	if bf.Close() != nil || s.handler.Remove(path) != nil {
+	box := s.boxesInfo[pos]
+	if box.f.Close() != nil || s.handler.Remove(box.f.Name()) != nil {
 		return ErrUnableToDeleteBox
 	}
-	s.boxFiles.Remove(node.e)
-	s.boxFilesIdx = slices.Delete(s.boxFilesIdx, pos, pos+1)
+	s.boxesInfo = slices.Delete(s.boxesInfo, pos, pos+1)
 	return nil
 }
 
 func (s *fileSystemStorage) CleanBox(id string) Error {
-	_, has := s.searchBoxPosition(id)
+	pos, has := s.searchBoxPosition(id)
 	if !has {
 		return nil
 	}
-	path := filepath.Join(s.path, id)
-	if err := s.handler.Clean(path); err != nil {
+	if err := s.handler.Clean(s.boxesInfo[pos].f); err != nil {
 		return ErrUnableToCleanBox
 	}
 	return nil
 }
 
 func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
-	path := filepath.Join(s.path, bid, cid)
+	path := filepath.Join(s.f.Name(), bid, cid)
 	_, has := s.searchBoxPosition(bid)
 	if !has {
 		return ErrBoxNotFoundToPostContent
@@ -178,7 +156,7 @@ func (s *fileSystemStorage) CreateContent(bid, cid string, d []byte) Error {
 }
 
 func (s *fileSystemStorage) ReadContent(bid, cid string) ([]byte, Error) {
-	path := filepath.Join(s.path, bid, cid)
+	path := filepath.Join(s.f.Name(), bid, cid)
 	_, has := s.searchBoxPosition(bid)
 	if !has {
 		return nil, ErrBoxNotFoundToReadContent
@@ -214,10 +192,8 @@ func NewFileSystemStorage(path, dir string) *fileSystemStorage {
 	}
 
 	return &fileSystemStorage{
-		f:           f,
-		boxFiles:    list.New(),
-		boxFilesIdx: []*idxNode{},
-		handler:     &defaulFileSystemHandler{},
-		path:        path,
+		f:         f,
+		boxesInfo: []*boxInfo{},
+		handler:   &defaulFileSystemHandler{},
 	}
 }
