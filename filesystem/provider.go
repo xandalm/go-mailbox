@@ -18,6 +18,7 @@ func join(s ...string) string {
 }
 
 type provider struct {
+	f    *os.File
 	path string
 }
 
@@ -27,7 +28,11 @@ func NewProvider(path, dir string) *provider {
 	if err != nil && !os.IsExist(err) {
 		panic("unable to create provider")
 	}
-	p := &provider{path}
+	f, err := os.Open(path)
+	if err != nil {
+		panic("unable to keep directory file open")
+	}
+	p := &provider{f, path}
 	return p
 }
 

@@ -94,7 +94,7 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 
 func TestBox_Post(t *testing.T) {
 	id := "box_1"
-	p := &provider{"Mailbox"}
+	p := &provider{nil, "Mailbox"}
 	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 
@@ -134,7 +134,7 @@ func TestBox_Post(t *testing.T) {
 
 func TestBox_Get(t *testing.T) {
 	id := "box_1"
-	p := &provider{"Mailbox"}
+	p := &provider{nil, "Mailbox"}
 	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 	createBoxContentFile(t, b, "1", Bytes("foo"))
@@ -171,7 +171,7 @@ func TestBox_Get(t *testing.T) {
 
 func TestBox_Delete(t *testing.T) {
 	id := "box_1"
-	p := &provider{"Mailbox"}
+	p := &provider{nil, "Mailbox"}
 	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 	createBoxContentFile(t, b, "1", Bytes("foo"))
@@ -209,7 +209,7 @@ func TestBox_Delete(t *testing.T) {
 
 func TestBox_Clean(t *testing.T) {
 	id := "box_1"
-	p := &provider{"Mailbox"}
+	p := &provider{nil, "Mailbox"}
 	b := &box{&fsHandlerImpl{}, p, id}
 	createBoxFolder(t, b)
 	createBoxContentFile(t, b, "1", Bytes("foo"))

@@ -10,6 +10,31 @@ import (
 	"github.com/xandalm/go-testing/assert"
 )
 
+func TestNewProvider(t *testing.T) {
+	path := ""
+	dir := "Mailbox"
+
+	got := NewProvider(path, dir)
+
+	assert.NotNil(t, got)
+	if got.f == nil {
+		t.Error("didn't open dir")
+	}
+	wantPath := filepath.Join(path, dir)
+	if got.path != wantPath {
+		t.Errorf("got provider path %s, but want %s", got.path, wantPath)
+	}
+
+	t.Cleanup(func() {
+		if got.f != nil {
+			got.f.Close()
+		}
+		if err := os.RemoveAll(filepath.Join(path, dir)); err != nil {
+			log.Fatal("unable to remove residual data")
+		}
+	})
+}
+
 func TestProvider_Create(t *testing.T) {
 	path := ""
 	dir := "Mailbox"
