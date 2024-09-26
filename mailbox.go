@@ -57,10 +57,13 @@ var (
 	ErrUnableToCleanBox      Error = newError("unable to clean box")
 	ErrUnableToListBoxes     Error = newError("unable to list boxes")
 
-	ErrRepeatedBoxIdentifier     Error = NewDetailedError(ErrUnableToCreateBox, "identifier already in use")
+	ErrRepeatedBoxIdentifier Error = NewDetailedError(ErrUnableToCreateBox, "identifier already in use")
+
+	ErrEmptyContentIdentifier    Error = NewDetailedError(ErrUnableToPostContent, "identifier cannot be empty")
 	ErrRepeatedContentIdentifier Error = NewDetailedError(ErrUnableToPostContent, "identifier already in use")
 	ErrBoxNotFoundToPostContent  Error = NewDetailedError(ErrUnableToPostContent, "box not found")
 	ErrBoxNotFoundToReadContent  Error = NewDetailedError(ErrUnableToReadContent, "box not found")
+	ErrNothingToPost             Error = NewDetailedError(ErrUnableToPostContent, "trying to post nothing")
 
 	ErrContentNotFound Error = NewDetailedError(ErrUnableToReadContent, "content not found")
 
@@ -130,6 +133,12 @@ func (b *box) Get(id string) (Bytes, Error) {
 }
 
 func (b *box) Post(id string, c Bytes) Error {
+	if id == "" {
+		return ErrEmptyContentIdentifier
+	}
+	if len(c) == 0 {
+		return ErrNothingToPost
+	}
 	return b.st.CreateContent(b.id, id, c)
 }
 

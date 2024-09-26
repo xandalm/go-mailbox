@@ -75,3 +75,34 @@ func TestCheckingForBox(t *testing.T) {
 		assert.False(t, got)
 	})
 }
+
+func TestPostingInBox(t *testing.T) {
+	st := &stubStorage{
+		Boxes: []stubStorageBox{{"box_1", make(map[string]Bytes)}},
+	}
+	b := &box{id: "box_1", st: st}
+
+	t.Run("post content", func(t *testing.T) {
+		cid := "data_1"
+		data := []byte("foo")
+		err := b.Post(cid, data)
+
+		assert.Nil(t, err)
+		if _, ok := st.Boxes[0].content[cid]; !ok {
+			t.Fatalf("there's no %s in %v", cid, st.Boxes[0].content)
+		}
+	})
+
+	t.Run("returns error because empty id", func(t *testing.T) {
+		err := b.Post("", []byte("foo"))
+
+		assert.Error(t, err, ErrEmptyContentIdentifier)
+	})
+
+	t.Run("returns erro because empty/nil data", func(t *testing.T) {
+
+		assert.Error(t, b.Post("data_1", nil), ErrNothingToPost)
+
+		assert.Error(t, b.Post("data_1", []byte{}), ErrNothingToPost)
+	})
+}
