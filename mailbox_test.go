@@ -120,3 +120,36 @@ func TestReadingFromBox(t *testing.T) {
 		assert.Equal(t, data, []byte("foo"))
 	})
 }
+
+func TestDeletingFromBox(t *testing.T) {
+	st := &stubStorage{
+		Boxes: []stubStorageBox{
+			{
+				"box_1",
+				map[string]Bytes{
+					"data_1": []byte("foo"),
+					"data_2": []byte("bar"),
+					"data_3": []byte("baz"),
+				},
+			},
+		},
+	}
+	b := &box{id: "box_1", st: st}
+
+	t.Run("remove content", func(t *testing.T) {
+		cid := "data_1"
+		err := b.Delete(cid)
+
+		assert.Nil(t, err)
+		if _, ok := st.Boxes[0].content[cid]; ok {
+			t.Fatal("didn't delete content")
+		}
+	})
+
+	t.Run("remove all content", func(t *testing.T) {
+		err := b.Clean()
+
+		assert.Nil(t, err)
+		assert.Empty(t, st.Boxes[0].content)
+	})
+}
