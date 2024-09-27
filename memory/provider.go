@@ -57,15 +57,3 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	b := p.boxes[id]
 	return b, nil
 }
-
-func (p *provider) List() ([]string, mailbox.Error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-
-	keys := []string{}
-	for k := range p.boxes {
-		keys = append(keys, k)
-	}
-
-	return keys, nil
-}
