@@ -3,6 +3,7 @@ package filesystem
 import (
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/xandalm/go-mailbox"
 )
@@ -67,21 +68,15 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	return nil, mailbox.ErrUnableToRestoreBox
 }
 
+func (p *provider) Contains(id string) (bool, mailbox.Error) {
+	return slices.ContainsFunc(p.boxes, func(b *box) bool {
+		return b.id == id
+	}), nil
+}
+
 func (p *provider) Delete(id string) mailbox.Error {
 	if err := os.RemoveAll(join(p.path, id)); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}
 	return nil
-}
-
-func (p *provider) List() ([]string, mailbox.Error) {
-	de, err := os.ReadDir(p.path)
-	if err != nil {
-		return nil, mailbox.ErrUnableToRestoreBox
-	}
-	ret := []string{}
-	for i := 0; i < len(de); i++ {
-		ret = append(ret, de[i].Name())
-	}
-	return ret, nil
 }

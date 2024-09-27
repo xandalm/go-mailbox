@@ -140,6 +140,32 @@ func TestProvider_Get(t *testing.T) {
 	t.Cleanup(newCleanUpFunc(p))
 }
 
+func TestProvider_Contains(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	createFolder(path, dir)
+	pDirPath := filepath.Join(path, dir)
+	createFolder(pDirPath, "box_1")
+
+	p := NewProvider(path, dir)
+
+	t.Run("returns true and nil error", func(t *testing.T) {
+		got, err := p.Contains("box_1")
+
+		assert.Nil(t, err)
+		assert.True(t, got)
+	})
+
+	t.Run("returns false and nil error", func(t *testing.T) {
+		got, err := p.Contains("box_2")
+
+		assert.Nil(t, err)
+		assert.False(t, got)
+	})
+
+	t.Cleanup(newCleanUpFunc(p))
+}
+
 func TestProvider_Delete(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
@@ -156,26 +182,6 @@ func TestProvider_Delete(t *testing.T) {
 		} else if !os.IsNotExist(err) {
 			log.Fatal("unable to check box folder existence")
 		}
-	})
-
-	t.Cleanup(newCleanUpFunc(p))
-}
-
-func TestProvider_List(t *testing.T) {
-	path := t.TempDir()
-	dir := "Mailbox"
-	p := NewProvider(path, dir)
-
-	p.Create("box_1")
-	p.Create("box_2")
-
-	t.Run("return boxes id list", func(t *testing.T) {
-		got, err := p.List()
-
-		assert.Nil(t, err)
-		assert.NotNil(t, got)
-		assert.Contains(t, got, "box_1")
-		assert.Contains(t, got, "box_2")
 	})
 
 	t.Cleanup(newCleanUpFunc(p))
