@@ -41,10 +41,11 @@ func TestBoxErasing(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	t.Run("returns error for inexistent box", func(t *testing.T) {
-		err := m.EraseBox("box_2")
+	t.Run("returns error from provider", func(t *testing.T) {
+		m := &manager{&stubFailingProvider{}}
+		err := m.EraseBox("box_1")
 
-		assert.Error(t, err, ErrUnknownBox)
+		assert.NotNil(t, err)
 	})
 }
 

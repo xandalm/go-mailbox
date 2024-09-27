@@ -112,7 +112,7 @@ func (m *manager) EraseBox(id string) Error {
 		return err
 	}
 	if !has {
-		return ErrUnknownBox
+		return nil
 	}
 	return m.p.Delete(id)
 }
