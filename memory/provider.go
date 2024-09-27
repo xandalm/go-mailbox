@@ -22,9 +22,9 @@ func NewProvider() *provider {
 	}
 }
 
-func (p *provider) contains(id string) bool {
+func (p *provider) Contains(id string) (bool, mailbox.Error) {
 	_, ok := p.boxes[id]
-	return ok
+	return ok, nil
 }
 
 func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
@@ -34,7 +34,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.contains(id) {
+	if has, _ := p.Contains(id); has {
 		return nil, ErrRepeatedBoxIdentifier
 	}
 	b := newBox()
