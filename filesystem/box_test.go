@@ -32,17 +32,22 @@ func (rw *stubFailingFsHandler) Clean(path string) error {
 	return errFoo
 }
 
-func createBoxFolder(t *testing.T, b *box) {
-	if err := os.MkdirAll(filepath.Join(b.p.path, b.id), 0666); err != nil {
-		t.Errorf("unable to create box folder, %v", err)
+func createBoxFolderAndReturnBox(p *provider, bid string) *box {
+	if err := os.MkdirAll(filepath.Join(p.path, bid), 0666); err != nil {
+		log.Fatalf("unable to create box folder, %v", err)
+	}
+	return &box{
+		&fsHandlerImpl{},
+		p,
+		bid,
 	}
 }
 
-func createBoxContentFile(t *testing.T, b *box, id string, content Bytes) {
+func createBoxContentFile(b *box, id string, content Bytes) {
 	filename := filepath.Join(b.p.path, b.id, id)
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		t.Errorf("unable to create box content file, %v", err)
+		log.Fatalf("unable to create box content file, %v", err)
 	}
 	defer f.Close()
 	f.Write(content)
@@ -94,9 +99,8 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 
 func TestBox_Post(t *testing.T) {
 	id := "box_1"
-	p := &provider{nil, "Mailbox"}
-	b := &box{&fsHandlerImpl{}, p, id}
-	createBoxFolder(t, b)
+	p := &provider{nil, []*box{}, "Mailbox"}
+	b := createBoxFolderAndReturnBox(p, id)
 
 	t.Run("post content", func(t *testing.T) {
 		content := Bytes("foo")
@@ -134,10 +138,9 @@ func TestBox_Post(t *testing.T) {
 
 func TestBox_Get(t *testing.T) {
 	id := "box_1"
-	p := &provider{nil, "Mailbox"}
-	b := &box{&fsHandlerImpl{}, p, id}
-	createBoxFolder(t, b)
-	createBoxContentFile(t, b, "1", Bytes("foo"))
+	p := &provider{nil, []*box{}, "Mailbox"}
+	b := createBoxFolderAndReturnBox(p, id)
+	createBoxContentFile(b, "1", Bytes("foo"))
 
 	t.Run("returns the content by post identifier", func(t *testing.T) {
 		got, err := b.Get("1")
@@ -171,10 +174,9 @@ func TestBox_Get(t *testing.T) {
 
 func TestBox_Delete(t *testing.T) {
 	id := "box_1"
-	p := &provider{nil, "Mailbox"}
-	b := &box{&fsHandlerImpl{}, p, id}
-	createBoxFolder(t, b)
-	createBoxContentFile(t, b, "1", Bytes("foo"))
+	p := &provider{nil, []*box{}, "Mailbox"}
+	b := createBoxFolderAndReturnBox(p, id)
+	createBoxContentFile(b, "1", Bytes("foo"))
 
 	t.Run("delete content", func(t *testing.T) {
 		err := b.Delete("1")
@@ -184,7 +186,7 @@ func TestBox_Delete(t *testing.T) {
 	})
 
 	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		createBoxContentFile(t, b, "1", Bytes("foo"))
+		createBoxContentFile(b, "1", Bytes("foo"))
 		b.fs = &stubFailingFsHandler{}
 		err := b.Delete("1")
 
@@ -209,11 +211,10 @@ func TestBox_Delete(t *testing.T) {
 
 func TestBox_Clean(t *testing.T) {
 	id := "box_1"
-	p := &provider{nil, "Mailbox"}
-	b := &box{&fsHandlerImpl{}, p, id}
-	createBoxFolder(t, b)
-	createBoxContentFile(t, b, "1", Bytes("foo"))
-	createBoxContentFile(t, b, "2", Bytes("bar"))
+	p := &provider{nil, []*box{}, "Mailbox"}
+	b := createBoxFolderAndReturnBox(p, id)
+	createBoxContentFile(b, "1", Bytes("foo"))
+	createBoxContentFile(b, "2", Bytes("bar"))
 
 	t.Run("remove all content", func(t *testing.T) {
 		err := b.Clean()

@@ -24,6 +24,12 @@ func newCleanUpFunc(p *provider) func() {
 	}
 }
 
+func createFolder(path, dir string) {
+	if err := os.MkdirAll(filepath.Join(path, dir), 0666); err != nil {
+		log.Fatalf("unable to create folder")
+	}
+}
+
 func TestNewProvider(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
@@ -38,6 +44,35 @@ func TestNewProvider(t *testing.T) {
 	if got.path != wantPath {
 		t.Errorf("got provider path %s, but want %s", got.path, wantPath)
 	}
+
+	t.Run("load existing boxes", func(t *testing.T) {
+		dir := "FilledMailbox"
+
+		createFolder(path, dir)
+		pDirPath := filepath.Join(path, dir)
+		createFolder(pDirPath, "box_1")
+		createFolder(pDirPath, "box_2")
+
+		got := NewProvider(path, dir)
+
+		assert.NotNil(t, got)
+		if got.f == nil {
+			t.Error("didn't open dir")
+		}
+		wantPath := filepath.Join(path, dir)
+		if got.path != wantPath {
+			t.Errorf("got provider path %s, but want %s", got.path, wantPath)
+		}
+
+		assert.ContainsFunc(t, got.boxes, "box_1", func(b *box, id string) bool {
+			return b.id == id
+		})
+		assert.ContainsFunc(t, got.boxes, "box_2", func(b *box, id string) bool {
+			return b.id == id
+		})
+
+		t.Cleanup(newCleanUpFunc(got))
+	})
 
 	t.Cleanup(newCleanUpFunc(got))
 }

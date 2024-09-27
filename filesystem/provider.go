@@ -18,8 +18,9 @@ func join(s ...string) string {
 }
 
 type provider struct {
-	f    *os.File
-	path string
+	f     *os.File
+	boxes []*box
+	path  string
 }
 
 func NewProvider(path, dir string) *provider {
@@ -32,7 +33,11 @@ func NewProvider(path, dir string) *provider {
 	if err != nil {
 		panic("unable to keep directory file open")
 	}
-	p := &provider{f, path}
+	p := &provider{f, []*box{}, path}
+	foundBoxes, _ := f.Readdirnames(0)
+	for _, id := range foundBoxes {
+		p.boxes = append(p.boxes, &box{&fsHandlerImpl{}, p, id})
+	}
 	return p
 }
 
