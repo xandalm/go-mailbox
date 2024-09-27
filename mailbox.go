@@ -1,10 +1,5 @@
 package mailbox
 
-import (
-	"slices"
-	"sync"
-)
-
 type Error interface {
 	sign() string
 	Error() string
@@ -65,7 +60,7 @@ type Manager interface {
 	// Remove box and all its contents.
 	EraseBox(string) Error
 	// Check if the box exists
-	ContainsBox(string) bool
+	ContainsBox(string) (bool, Error)
 }
 
 type Provider interface {
@@ -73,10 +68,10 @@ type Provider interface {
 	Create(string) (Box, Error)
 	// Get existing box.
 	Get(string) (Box, Error)
+	// Check for box existence.
+	Contains(string) (bool, Error)
 	// Delete existing box and all its contents.
 	Delete(string) Error
-	// List the identifier from all existing boxes.
-	List() ([]string, Error)
 }
 
 type Bytes []byte
@@ -93,66 +88,35 @@ type Box interface {
 }
 
 type manager struct {
-	mu  sync.Mutex
-	p   Provider
-	idx []string
+	p Provider
 }
 
 func NewManager(p Provider) Manager {
-	l, _ := p.List()
-	m := &manager{p: p, idx: l}
-	return m
-}
-
-func (m *manager) contains(id string) (bool, int) {
-	pos, ok := slices.BinarySearch(m.idx, id)
-	return ok, pos
-}
-
-func (m *manager) insert(pos int, id string) {
-	m.idx = slices.Insert(m.idx, pos, id)
-}
-
-func (m *manager) createBox(pos int, id string) (Box, Error) {
-	b, err := m.p.Create(id)
-	if err == nil {
-		m.insert(pos, id)
-	}
-	return b, err
-}
-
-func (m *manager) getBox(id string) (Box, Error) {
-	return m.p.Get(id)
+	return &manager{p: p}
 }
 
 func (m *manager) RequestBox(id string) (Box, Error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	has, pos := m.contains(id)
-	if has {
-		return m.getBox(id)
+	box, err := m.p.Get(id)
+	if err != nil {
+		return nil, err
 	}
-	return m.createBox(pos, id)
+	if box == nil {
+		box, err = m.p.Create(id)
+	}
+	return box, err
 }
 
 func (m *manager) EraseBox(id string) Error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	has, pos := m.contains(id)
+	has, err := m.p.Contains(id)
+	if err != nil {
+		return err
+	}
 	if !has {
 		return ErrUnknownBox
 	}
-	if err := m.p.Delete(id); err != nil {
-		return err
-	}
-	m.idx = slices.Delete(m.idx, pos, pos+1)
-	return nil
+	return m.p.Delete(id)
 }
 
-func (m *manager) ContainsBox(id string) bool {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	has, _ := m.contains(id)
-	return has
+func (m *manager) ContainsBox(id string) (bool, Error) {
+	return m.p.Contains(id)
 }

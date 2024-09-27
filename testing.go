@@ -39,6 +39,13 @@ func (s *stubProvider) Get(id string) (Box, Error) {
 	return &stubBox{id}, nil
 }
 
+func (s *stubProvider) Contains(id string) (bool, Error) {
+	has := slices.ContainsFunc(s.Boxes, func(b *stubBox) bool {
+		return b.Id == id
+	})
+	return has, nil
+}
+
 func (s *stubProvider) Delete(id string) Error {
 	s.Boxes = slices.DeleteFunc(s.Boxes, func(sb *stubBox) bool {
 		return sb.Id == id
@@ -64,6 +71,10 @@ func (s *stubFailingProvider) Create(id string) (Box, Error) {
 
 func (s *stubFailingProvider) Get(id string) (Box, Error) {
 	return nil, errFoo
+}
+
+func (s *stubFailingProvider) Contains(id string) (bool, Error) {
+	return false, errFoo
 }
 
 func (s *stubFailingProvider) Delete(id string) Error {
