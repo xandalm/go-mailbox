@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/xandalm/go-mailbox"
-	"github.com/xandalm/go-session/testing/assert"
+	"github.com/xandalm/go-testing/assert"
 )
 
 func TestProvider_Create(t *testing.T) {
@@ -14,7 +14,7 @@ func TestProvider_Create(t *testing.T) {
 
 	got, err := p.Create("box_1")
 
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.NotNil(t, got)
 	assert.NotEmpty(t, p.(*provider).boxes)
 
@@ -42,8 +42,29 @@ func TestProvider_Get(t *testing.T) {
 	got, err := p.Get("box_1")
 	want := p.boxes["box_1"]
 
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.Equal(t, got.(*box), want)
+}
+
+func TestProvider_Contains(t *testing.T) {
+	p := &provider{
+		boxes: map[string]*box{
+			"box_1": {},
+		},
+	}
+
+	t.Run("returns true and nil error", func(t *testing.T) {
+		got, err := p.Contains("box_1")
+
+		assert.Nil(t, err)
+		assert.True(t, got)
+	})
+	t.Run("returns false and nil error", func(t *testing.T) {
+		got, err := p.Contains("box_2")
+
+		assert.Nil(t, err)
+		assert.False(t, got)
+	})
 }
 
 func TestProvider_Delete(t *testing.T) {
@@ -55,6 +76,6 @@ func TestProvider_Delete(t *testing.T) {
 
 	err := p.Delete("box_1")
 
-	assert.NoError(t, err)
+	assert.Nil(t, err)
 	assert.Empty(t, p.boxes)
 }
