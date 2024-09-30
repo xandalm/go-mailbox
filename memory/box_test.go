@@ -3,6 +3,7 @@ package memory
 import (
 	"testing"
 
+	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -14,9 +15,10 @@ func TestBox_Post(t *testing.T) {
 			contents: map[string]Bytes{},
 		}
 
-		err := b.Post("1", content)
+		ct, err := b.Post("1", content)
 
 		assert.Nil(t, err)
+		assert.NotZero(t, ct)
 
 		assert.NotEmpty(t, b.contents)
 		assert.Equal(t, b.contents["1"], content)
@@ -26,7 +28,8 @@ func TestBox_Post(t *testing.T) {
 			contents: map[string]Bytes{"1": Bytes("foo")},
 		}
 
-		err := b.Post("1", Bytes("bar"))
+		ct, err := b.Post("1", Bytes("bar"))
+		assert.Zero(t, ct)
 		assert.Error(t, err, ErrRepeatedContentIdentifier)
 	})
 	t.Run("returns error because nil content", func(t *testing.T) {
@@ -34,7 +37,8 @@ func TestBox_Post(t *testing.T) {
 			contents: map[string]Bytes{},
 		}
 
-		err := b.Post("1", nil)
+		ct, err := b.Post("1", nil)
+		assert.Zero(t, ct)
 		assert.Error(t, err, ErrPostingNilContent)
 	})
 }
@@ -47,11 +51,14 @@ func TestBox_Get(t *testing.T) {
 		}
 
 		got, err := b.Get("1")
+		want := mailbox.Data{
+			Content: content,
+		}
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
 
-		assert.Equal(t, got, content)
+		assert.Equal(t, got, want)
 	})
 }
 
