@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/xandalm/go-testing/assert"
@@ -19,15 +21,45 @@ func newCleanUpFunc(p *provider) func() {
 			p.f.Close()
 		}
 		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
-			log.Fatal("unable to remove residual data")
+			log.Fatalf("unable to remove residual data, %v", err)
 		}
 	}
 }
 
 func createFolder(path, dir string) {
 	if err := os.MkdirAll(filepath.Join(path, dir), 0666); err != nil {
-		log.Fatalf("unable to create folder")
+		log.Fatalf("unable to create folder, %v", err)
 	}
+}
+
+func createProvider(path, dir string) *provider {
+	createFolder(path, dir)
+	path = filepath.Join(path, dir)
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("unable to open provider file, %v", err)
+	}
+	p := &provider{
+		f,
+		[]*box{},
+		path,
+	}
+	return p
+}
+
+func createBox(p *provider, id string) *box {
+	createFolder(p.path, id)
+	filepath.Join(p.path, id)
+	pos, _ := slices.BinarySearchFunc(p.boxes, id, func(b *box, id string) int {
+		return strings.Compare(b.id, id)
+	})
+	b := &box{
+		&fsHandlerImpl{},
+		p,
+		id,
+	}
+	p.boxes = slices.Insert(p.boxes, pos, b)
+	return b
 }
 
 func TestNewProvider(t *testing.T) {
@@ -80,7 +112,7 @@ func TestNewProvider(t *testing.T) {
 func TestProvider_Create(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
-	p := NewProvider(path, dir)
+	p := createProvider(path, dir)
 
 	t.Run("create and return box", func(t *testing.T) {
 		got, err := p.Create("box_1")
@@ -121,9 +153,9 @@ func TestProvider_Create(t *testing.T) {
 func TestProvider_Get(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
-	p := NewProvider(path, dir)
 
-	p.Create("box_1")
+	p := createProvider(path, dir)
+	createBox(p, "box_1")
 
 	t.Run("return box", func(t *testing.T) {
 		got, err := p.Get("box_1")
@@ -146,11 +178,9 @@ func TestProvider_Get(t *testing.T) {
 func TestProvider_Contains(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
-	createFolder(path, dir)
-	pDirPath := filepath.Join(path, dir)
-	createFolder(pDirPath, "box_1")
 
-	p := NewProvider(path, dir)
+	p := createProvider(path, dir)
+	createBox(p, "box_1")
 
 	t.Run("returns true and nil error", func(t *testing.T) {
 		got, err := p.Contains("box_1")
@@ -172,9 +202,9 @@ func TestProvider_Contains(t *testing.T) {
 func TestProvider_Delete(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
-	p := NewProvider(path, dir)
 
-	p.Create("box_1")
+	p := createProvider(path, dir)
+	createBox(p, "box_1")
 
 	t.Run("delete box", func(t *testing.T) {
 		got := p.Delete("box_1")
