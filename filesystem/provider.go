@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/xandalm/go-mailbox"
 )
@@ -20,6 +21,7 @@ func join(s ...string) string {
 }
 
 type provider struct {
+	mu    sync.RWMutex
 	f     *os.File
 	boxes []*box
 	path  string
@@ -35,7 +37,7 @@ func NewProvider(path, dir string) *provider {
 	if err != nil {
 		panic("unable to keep directory file open")
 	}
-	p := &provider{f, []*box{}, path}
+	p := &provider{sync.RWMutex{}, f, []*box{}, path}
 	foundBoxes, err := f.Readdirnames(0)
 	if err != nil {
 		panic("unable to load existing boxes")
@@ -62,6 +64,9 @@ func (p *provider) removeBoxAt(pos int) {
 }
 
 func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
@@ -79,6 +84,9 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	pos, has := p.boxPosition(id)
 	if !has {
 		return nil, ErrBoxNotFound
@@ -87,11 +95,17 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 }
 
 func (p *provider) Contains(id string) (bool, mailbox.Error) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
 	_, has := p.boxPosition(id)
 	return has, nil
 }
 
 func (p *provider) Delete(id string) mailbox.Error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
 	pos, has := p.boxPosition(id)
 	if !has {
 		return nil

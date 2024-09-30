@@ -32,17 +32,6 @@ func (rw *stubFailingFsHandler) Clean(path string) error {
 	return errFoo
 }
 
-func createBoxFolderAndReturnBox(p *provider, bid string) *box {
-	if err := os.MkdirAll(filepath.Join(p.path, bid), 0666); err != nil {
-		log.Fatalf("unable to create box folder, %v", err)
-	}
-	return &box{
-		&fsHandlerImpl{},
-		p,
-		bid,
-	}
-}
-
 func createBoxContentFile(b *box, id string, content Bytes) {
 	filename := filepath.Join(b.p.path, b.id, id)
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
@@ -98,9 +87,11 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 }
 
 func TestBox_Post(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	p := createProvider(path, dir)
 	id := "box_1"
-	p := &provider{nil, []*box{}, "Mailbox"}
-	b := createBoxFolderAndReturnBox(p, id)
+	b := createBox(p, id)
 
 	t.Run("post content", func(t *testing.T) {
 		content := Bytes("foo")
@@ -129,17 +120,15 @@ func TestBox_Post(t *testing.T) {
 		assert.Error(t, err, mailbox.ErrUnableToPostContent)
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
 
 func TestBox_Get(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	p := createProvider(path, dir)
 	id := "box_1"
-	p := &provider{nil, []*box{}, "Mailbox"}
-	b := createBoxFolderAndReturnBox(p, id)
+	b := createBox(p, id)
 	createBoxContentFile(b, "1", Bytes("foo"))
 
 	t.Run("returns the content by post identifier", func(t *testing.T) {
@@ -165,17 +154,15 @@ func TestBox_Get(t *testing.T) {
 		assert.Error(t, err, mailbox.ErrUnableToReadContent)
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
 
 func TestBox_Delete(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	p := createProvider(path, dir)
 	id := "box_1"
-	p := &provider{nil, []*box{}, "Mailbox"}
-	b := createBoxFolderAndReturnBox(p, id)
+	b := createBox(p, id)
 	createBoxContentFile(b, "1", Bytes("foo"))
 
 	t.Run("delete content", func(t *testing.T) {
@@ -202,17 +189,15 @@ func TestBox_Delete(t *testing.T) {
 		assertContentFileNotExists(t, b, "2")
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }
 
 func TestBox_Clean(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	p := createProvider(path, dir)
 	id := "box_1"
-	p := &provider{nil, []*box{}, "Mailbox"}
-	b := createBoxFolderAndReturnBox(p, id)
+	b := createBox(p, id)
 	createBoxContentFile(b, "1", Bytes("foo"))
 	createBoxContentFile(b, "2", Bytes("bar"))
 
@@ -231,9 +216,5 @@ func TestBox_Clean(t *testing.T) {
 		assert.Error(t, err, mailbox.ErrUnableToCleanBox)
 	})
 
-	t.Cleanup(func() {
-		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
-			log.Fatal("unable to remove residual data")
-		}
-	})
+	t.Cleanup(newCleanUpFunc(p))
 }

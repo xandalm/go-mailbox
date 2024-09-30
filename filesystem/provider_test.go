@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/xandalm/go-testing/assert"
@@ -40,6 +41,7 @@ func createProvider(path, dir string) *provider {
 		log.Fatalf("unable to open provider file, %v", err)
 	}
 	p := &provider{
+		sync.RWMutex{},
 		f,
 		[]*box{},
 		path,
