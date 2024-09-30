@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/xandalm/go-mailbox"
 )
@@ -35,11 +36,25 @@ func NewProvider(path, dir string) *provider {
 		panic("unable to keep directory file open")
 	}
 	p := &provider{f, []*box{}, path}
-	foundBoxes, _ := f.Readdirnames(0)
+	foundBoxes, err := f.Readdirnames(0)
+	if err != nil {
+		panic("unable to load existing boxes")
+	}
 	for _, id := range foundBoxes {
-		p.boxes = append(p.boxes, &box{&fsHandlerImpl{}, p, id})
+		pos, _ := p.boxPosition(id)
+		p.insertBoxAt(pos, &box{&fsHandlerImpl{}, p, id})
 	}
 	return p
+}
+
+func (p *provider) boxPosition(id string) (int, bool) {
+	return slices.BinarySearchFunc(p.boxes, id, func(b *box, id string) int {
+		return strings.Compare(b.id, id)
+	})
+}
+
+func (p *provider) insertBoxAt(pos int, b *box) {
+	p.boxes = slices.Insert(p.boxes, pos, b)
 }
 
 func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
@@ -47,32 +62,29 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 		return nil, ErrEmptyBoxIdentifier
 	}
 	path := join(p.path, id)
-	if _, err := os.Stat(path); err == nil {
+	pos, has := p.boxPosition(id)
+	if has {
 		return nil, ErrRepeatedBoxIdentifier
-	} else if !os.IsNotExist(err) {
-		return nil, mailbox.ErrUnableToCreateBox
 	}
 	if err := os.Mkdir(path, 0666); err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
 	b := &box{&fsHandlerImpl{}, p, id}
-	p.boxes = append(p.boxes, b)
+	p.insertBoxAt(pos, b)
 	return b, nil
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
-	if _, err := os.Stat(join(p.path, id)); err == nil {
-		return &box{&fsHandlerImpl{}, p, id}, nil
-	} else if os.IsNotExist(err) {
+	pos, has := p.boxPosition(id)
+	if !has {
 		return nil, ErrBoxNotFound
 	}
-	return nil, mailbox.ErrUnableToRestoreBox
+	return p.boxes[pos], nil
 }
 
 func (p *provider) Contains(id string) (bool, mailbox.Error) {
-	return slices.ContainsFunc(p.boxes, func(b *box) bool {
-		return b.id == id
-	}), nil
+	_, has := p.boxPosition(id)
+	return has, nil
 }
 
 func (p *provider) Delete(id string) mailbox.Error {
