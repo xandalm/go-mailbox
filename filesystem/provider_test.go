@@ -5,74 +5,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
-	"sync"
 	"testing"
 
 	"github.com/xandalm/go-testing/assert"
 )
-
-func newCleanUpFunc(p *provider) func() {
-	return func() {
-		if p == nil {
-			return
-		}
-		if p.f != nil {
-			p.f.Close()
-			for _, b := range p.boxes {
-				if b.f != nil {
-					b.f.Close()
-				}
-			}
-		}
-		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
-			log.Fatalf("unable to remove residual data, %v", err)
-		}
-	}
-}
-
-func createFolder(path, dir string) {
-	if err := os.MkdirAll(filepath.Join(path, dir), 0666); err != nil {
-		log.Fatalf("unable to create folder, %v", err)
-	}
-}
-
-func createProvider(path, dir string) *provider {
-	createFolder(path, dir)
-	path = filepath.Join(path, dir)
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatalf("unable to open provider file, %v", err)
-	}
-	p := &provider{
-		sync.RWMutex{},
-		f,
-		[]*box{},
-		path,
-	}
-	return p
-}
-
-func createBox(p *provider, id string) *box {
-	createFolder(p.path, id)
-	path := filepath.Join(p.path, id)
-	pos, _ := slices.BinarySearchFunc(p.boxes, id, func(b *box, id string) int {
-		return strings.Compare(b.id, id)
-	})
-	f, err := os.Open(path)
-	if err != nil {
-		log.Fatalf("unable to open box file, %v", err)
-	}
-	b := &box{
-		&fsHandlerImpl{},
-		f,
-		p,
-		id,
-	}
-	p.boxes = slices.Insert(p.boxes, pos, b)
-	return b
-}
 
 func TestNewProvider(t *testing.T) {
 	path := t.TempDir()
