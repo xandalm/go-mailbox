@@ -20,6 +20,11 @@ func newCleanUpFunc(p *provider) func() {
 		}
 		if p.f != nil {
 			p.f.Close()
+			for _, b := range p.boxes {
+				if b.f != nil {
+					b.f.Close()
+				}
+			}
 		}
 		if err := os.RemoveAll(filepath.Join(p.path)); err != nil {
 			log.Fatalf("unable to remove residual data, %v", err)
@@ -51,12 +56,17 @@ func createProvider(path, dir string) *provider {
 
 func createBox(p *provider, id string) *box {
 	createFolder(p.path, id)
-	filepath.Join(p.path, id)
+	path := filepath.Join(p.path, id)
 	pos, _ := slices.BinarySearchFunc(p.boxes, id, func(b *box, id string) int {
 		return strings.Compare(b.id, id)
 	})
+	f, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("unable to open box file, %v", err)
+	}
 	b := &box{
 		&fsHandlerImpl{},
+		f,
 		p,
 		id,
 	}
@@ -121,7 +131,10 @@ func TestProvider_Create(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
-		assert.Equal(t, *got.(*box), box{&fsHandlerImpl{}, p, "box_1"})
+		b := got.(*box)
+		assert.Equal(t, b.p, p)
+		assert.Equal(t, b.id, "box_1")
+		assert.NotNil(t, b.f)
 
 		assert.ContainsFunc(t, p.boxes, "box_1", func(b *box, id string) bool {
 			return b.id == id
@@ -164,7 +177,10 @@ func TestProvider_Get(t *testing.T) {
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
-		assert.Equal(t, *got.(*box), box{&fsHandlerImpl{}, p, "box_1"})
+		b := got.(*box)
+		assert.Equal(t, b.p, p)
+		assert.Equal(t, b.id, "box_1")
+		assert.NotNil(t, b.f)
 	})
 
 	t.Run("return error because box doesn't exist", func(t *testing.T) {

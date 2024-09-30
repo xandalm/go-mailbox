@@ -44,7 +44,11 @@ func NewProvider(path, dir string) *provider {
 	}
 	for _, id := range foundBoxes {
 		pos, _ := p.boxPosition(id)
-		p.insertBoxAt(pos, &box{&fsHandlerImpl{}, p, id})
+		f, err := os.Open(join(path, id))
+		if err != nil {
+			panic("unable to load existing boxes")
+		}
+		p.insertBoxAt(pos, &box{&fsHandlerImpl{}, f, p, id})
 	}
 	return p
 }
@@ -70,15 +74,19 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
-	path := join(p.path, id)
 	pos, has := p.boxPosition(id)
 	if has {
 		return nil, ErrRepeatedBoxIdentifier
 	}
+	path := join(p.path, id)
 	if err := os.Mkdir(path, 0666); err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{&fsHandlerImpl{}, p, id}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, mailbox.ErrUnableToCreateBox
+	}
+	b := &box{&fsHandlerImpl{}, f, p, id}
 	p.insertBoxAt(pos, b)
 	return b, nil
 }
@@ -109,6 +117,9 @@ func (p *provider) Delete(id string) mailbox.Error {
 	pos, has := p.boxPosition(id)
 	if !has {
 		return nil
+	}
+	if err := p.boxes[pos].f.Close(); err != nil {
+		return mailbox.ErrUnableToDeleteBox
 	}
 	if err := os.RemoveAll(join(p.path, id)); err != nil {
 		return mailbox.ErrUnableToDeleteBox

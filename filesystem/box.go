@@ -88,6 +88,7 @@ func (fs *fsHandlerImpl) Clean(path string) error {
 
 type box struct {
 	fs fsHandler
+	f  *os.File
 	p  *provider
 	id string
 }
