@@ -48,7 +48,7 @@ func NewProvider(path, dir string) *provider {
 		if err != nil {
 			panic("unable to load existing boxes")
 		}
-		p.insertBoxAt(pos, &box{f, p, id})
+		p.insertBoxAt(pos, &box{sync.RWMutex{}, f, p, id})
 	}
 	return p
 }
@@ -86,7 +86,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{f, p, id}
+	b := &box{sync.RWMutex{}, f, p, id}
 	p.insertBoxAt(pos, b)
 	return b, nil
 }
@@ -118,9 +118,15 @@ func (p *provider) Delete(id string) mailbox.Error {
 	if !has {
 		return nil
 	}
-	if err := p.boxes[pos].f.Close(); err != nil {
+	b := p.boxes[pos]
+
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	if err := b.f.Close(); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}
+	b.f = nil
 	if err := os.RemoveAll(join(p.path, id)); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}

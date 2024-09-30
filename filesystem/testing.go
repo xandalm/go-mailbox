@@ -65,6 +65,7 @@ func createBox(p *provider, id string) *box {
 		log.Fatalf("unable to open box file, %v", err)
 	}
 	b := &box{
+		sync.RWMutex{},
 		f,
 		p,
 		id,

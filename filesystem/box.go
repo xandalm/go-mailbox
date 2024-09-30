@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"os"
+	"sync"
 
 	"github.com/xandalm/go-mailbox"
 )
@@ -15,6 +16,7 @@ var (
 type Bytes = mailbox.Bytes
 
 type box struct {
+	mu sync.RWMutex
 	f  *os.File
 	p  *provider
 	id string
@@ -22,6 +24,9 @@ type box struct {
 
 // Clean implements mailbox.Box.
 func (b *box) Clean() mailbox.Error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	names, err := b.f.Readdirnames(0)
 	if err != nil {
 		return mailbox.ErrUnableToCleanBox
@@ -34,6 +39,9 @@ func (b *box) Clean() mailbox.Error {
 
 // Delete implements mailbox.Box.
 func (b *box) Delete(id string) mailbox.Error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	name := join(b.f.Name(), id)
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return nil
@@ -48,6 +56,9 @@ func (b *box) Delete(id string) mailbox.Error {
 
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (Bytes, mailbox.Error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	name := join(b.f.Name(), id)
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return nil, ErrContentNotFound
@@ -63,6 +74,9 @@ func (b *box) Get(id string) (Bytes, mailbox.Error) {
 
 // Post implements mailbox.Box.
 func (b *box) Post(id string, c Bytes) mailbox.Error {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if c == nil {
 		return ErrPostingNilContent
 	}
