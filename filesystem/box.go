@@ -1,8 +1,6 @@
 package filesystem
 
 import (
-	"errors"
-	"io"
 	"os"
 
 	"github.com/xandalm/go-mailbox"
@@ -12,102 +10,37 @@ var (
 	ErrRepeatedContentIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "provided identifier is already in use")
 	ErrPostingNilContent         = mailbox.NewDetailedError(mailbox.ErrUnableToPostContent, "can't post nil content")
 	ErrContentNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToReadContent, "not found")
-
-	errFileAlreadyExists   = errors.New("file already exists")
-	errFileNotExist        = errors.New("file not exists")
-	errUnableToCheckFile   = errors.New("unable to check file")
-	errUnableToWriteFile   = errors.New("unable to write file")
-	errUnableToReadFile    = errors.New("unable to read file")
-	errUnableToDeleteFile  = errors.New("unable to delete file")
-	errUnableToCleanFolder = errors.New("unable to clean folder files")
 )
 
 type Bytes = mailbox.Bytes
 
-type fsHandler interface {
-	Read(string, string) ([]byte, error)
-	Write(string, string, []byte) error
-	Delete(string, string) error
-	Clean(string) error
-}
-
-type fsHandlerImpl struct{}
-
-func (fs *fsHandlerImpl) Read(path, id string) ([]byte, error) {
-	name := join(path, id)
-	f, err := os.Open(name)
-	if os.IsNotExist(err) {
-		return nil, errFileNotExist
-	}
-	if err != nil {
-		return nil, errUnableToReadFile
-	}
-	defer f.Close()
-	if data, err := io.ReadAll(f); err == nil {
-		return data, nil
-	}
-	return nil, errUnableToReadFile
-}
-
-func (fs *fsHandlerImpl) Write(path, id string, data []byte) error {
-	name := join(path, id)
-	if _, err := os.Stat(name); err == nil {
-		return errFileAlreadyExists
-	} else if !os.IsNotExist(err) {
-		return errUnableToCheckFile
-	}
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
-		return errUnableToWriteFile
-	}
-	defer f.Close()
-	if _, err := f.Write(data); err != nil {
-		return errUnableToWriteFile
-	}
-	return nil
-}
-
-func (fs *fsHandlerImpl) Delete(path, id string) error {
-	name := join(path, id)
-	if err := os.Remove(name); err != nil && !os.IsNotExist(err) {
-		return errUnableToDeleteFile
-	}
-	return nil
-}
-
-func (fs *fsHandlerImpl) Clean(path string) error {
-	dirEntry, err := os.ReadDir(path)
-	if err != nil {
-		return errUnableToCleanFolder
-	}
-	for _, e := range dirEntry {
-		os.Remove(join(path, e.Name()))
-	}
-	return nil
-}
-
 type box struct {
-	fs fsHandler
 	f  *os.File
 	p  *provider
 	id string
 }
 
-func (b *box) path() string {
-	return join(b.p.path, b.id)
-}
-
 // Clean implements mailbox.Box.
 func (b *box) Clean() mailbox.Error {
-	if err := b.fs.Clean(b.path()); err != nil {
+	names, err := b.f.Readdirnames(0)
+	if err != nil {
 		return mailbox.ErrUnableToCleanBox
+	}
+	for _, name := range names {
+		os.Remove(join(b.f.Name(), name))
 	}
 	return nil
 }
 
 // Delete implements mailbox.Box.
 func (b *box) Delete(id string) mailbox.Error {
-	if err := b.fs.Delete(b.path(), id); err != nil {
+	name := join(b.f.Name(), id)
+	if _, err := os.Stat(name); os.IsNotExist(err) {
+		return nil
+	} else if err != nil {
+		return mailbox.ErrUnableToReadContent
+	}
+	if err := os.Remove(name); err != nil {
 		return mailbox.ErrUnableToDeleteContent
 	}
 	return nil
@@ -115,16 +48,17 @@ func (b *box) Delete(id string) mailbox.Error {
 
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (Bytes, mailbox.Error) {
-	data, err := b.fs.Read(b.path(), id)
-	if err == nil {
-		return data, nil
-	}
-	switch err {
-	case errFileNotExist:
+	name := join(b.f.Name(), id)
+	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return nil, ErrContentNotFound
-	default:
+	} else if err != nil {
 		return nil, mailbox.ErrUnableToReadContent
 	}
+	data, err := os.ReadFile(name)
+	if err != nil {
+		return nil, mailbox.ErrUnableToReadContent
+	}
+	return data, nil
 }
 
 // Post implements mailbox.Box.
@@ -132,14 +66,15 @@ func (b *box) Post(id string, c Bytes) mailbox.Error {
 	if c == nil {
 		return ErrPostingNilContent
 	}
-	err := b.fs.Write(b.path(), id, c)
-	if err == nil {
-		return nil
-	}
-	switch err {
-	case errFileAlreadyExists:
+	name := join(b.f.Name(), id)
+	if _, err := os.Stat(name); err == nil {
 		return ErrRepeatedContentIdentifier
-	default:
+	} else if !os.IsNotExist(err) {
 		return mailbox.ErrUnableToPostContent
 	}
+	err := os.WriteFile(name, c, 0666)
+	if err != nil {
+		return mailbox.ErrUnableToPostContent
+	}
+	return nil
 }

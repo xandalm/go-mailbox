@@ -48,7 +48,7 @@ func NewProvider(path, dir string) *provider {
 		if err != nil {
 			panic("unable to load existing boxes")
 		}
-		p.insertBoxAt(pos, &box{&fsHandlerImpl{}, f, p, id})
+		p.insertBoxAt(pos, &box{f, p, id})
 	}
 	return p
 }
@@ -86,7 +86,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{&fsHandlerImpl{}, f, p, id}
+	b := &box{f, p, id}
 	p.insertBoxAt(pos, b)
 	return b, nil
 }

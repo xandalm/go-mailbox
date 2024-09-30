@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"errors"
 	"io"
 	"log"
 	"os"
@@ -66,33 +65,12 @@ func createBox(p *provider, id string) *box {
 		log.Fatalf("unable to open box file, %v", err)
 	}
 	b := &box{
-		&fsHandlerImpl{},
 		f,
 		p,
 		id,
 	}
 	p.boxes = slices.Insert(p.boxes, pos, b)
 	return b
-}
-
-var errFoo = errors.New("some error")
-
-type stubFailingFsHandler struct{}
-
-func (rw *stubFailingFsHandler) Read(path, id string) ([]byte, error) {
-	return nil, errFoo
-}
-
-func (rw *stubFailingFsHandler) Write(path, id string, data []byte) error {
-	return errFoo
-}
-
-func (rw *stubFailingFsHandler) Delete(path, id string) error {
-	return errFoo
-}
-
-func (rw *stubFailingFsHandler) Clean(path string) error {
-	return errFoo
 }
 
 func createBoxContentFile(b *box, id string, content Bytes) {

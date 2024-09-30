@@ -3,7 +3,6 @@ package filesystem
 import (
 	"testing"
 
-	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -34,13 +33,6 @@ func TestBox_Post(t *testing.T) {
 		assert.Error(t, err, ErrPostingNilContent)
 	})
 
-	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		b.fs = &stubFailingFsHandler{}
-
-		err := b.Post("2", Bytes("bar"))
-		assert.Error(t, err, mailbox.ErrUnableToPostContent)
-	})
-
 	t.Cleanup(newCleanUpFunc(p))
 }
 
@@ -68,13 +60,6 @@ func TestBox_Get(t *testing.T) {
 		assert.Error(t, err, ErrContentNotFound)
 	})
 
-	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		b.fs = &stubFailingFsHandler{}
-
-		_, err := b.Get("1")
-		assert.Error(t, err, mailbox.ErrUnableToReadContent)
-	})
-
 	t.Cleanup(newCleanUpFunc(p))
 }
 
@@ -93,17 +78,7 @@ func TestBox_Delete(t *testing.T) {
 		assertContentFileNotExists(t, b, "1")
 	})
 
-	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		createBoxContentFile(b, "1", Bytes("foo"))
-		b.fs = &stubFailingFsHandler{}
-		err := b.Delete("1")
-
-		assert.Error(t, err, mailbox.ErrUnableToDeleteContent)
-		assertContentFileExists(t, b, "1")
-	})
-
 	t.Run("do nothing on not found content", func(t *testing.T) {
-		b.fs = &fsHandlerImpl{}
 		err := b.Delete("2")
 
 		assert.Nil(t, err)
@@ -128,13 +103,6 @@ func TestBox_Clean(t *testing.T) {
 		assert.Nil(t, err)
 		assertContentFileNotExists(t, b, "1")
 		assertContentFileNotExists(t, b, "2")
-	})
-
-	t.Run("returns error because unexpected condition", func(t *testing.T) {
-		b.fs = &stubFailingFsHandler{}
-		err := b.Clean()
-
-		assert.Error(t, err, mailbox.ErrUnableToCleanBox)
 	})
 
 	t.Cleanup(newCleanUpFunc(p))
