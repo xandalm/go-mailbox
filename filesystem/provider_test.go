@@ -85,10 +85,13 @@ func TestProvider_Create(t *testing.T) {
 	t.Run("create and return box", func(t *testing.T) {
 		got, err := p.Create("box_1")
 
-		assert.Nil(t, err, "expected nil but got %v", err)
+		assert.Nil(t, err)
 		assert.NotNil(t, got)
 		assert.Equal(t, *got.(*box), box{&fsHandlerImpl{}, p, "box_1"})
 
+		assert.ContainsFunc(t, p.boxes, "box_1", func(b *box, id string) bool {
+			return b.id == id
+		})
 		entry, osErr := os.ReadDir(filepath.Join(p.path))
 		if osErr != nil {
 			t.Fatalf("unable to check dir, %v", osErr)

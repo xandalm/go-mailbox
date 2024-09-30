@@ -56,6 +56,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
 	b := &box{&fsHandlerImpl{}, p, id}
+	p.boxes = append(p.boxes, b)
 	return b, nil
 }
 
