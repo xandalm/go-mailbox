@@ -9,11 +9,15 @@ type stubBox struct {
 	Id string
 }
 
-func (s *stubBox) Post(string, Bytes) Error {
+func (s *stubBox) Post(string, Bytes) (int64, Error) {
 	panic("unimplemented")
 }
 
-func (s *stubBox) Get(string) (Bytes, Error) {
+func (s *stubBox) Get(string) (Data, Error) {
+	panic("unimplemented")
+}
+
+func (s *stubBox) GetFromPeriod(begin, end int64) ([]Data, Error) {
 	panic("unimplemented")
 }
 

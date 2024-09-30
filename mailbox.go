@@ -76,11 +76,18 @@ type Provider interface {
 
 type Bytes []byte
 
+type Data struct {
+	CreationTime int64
+	Content      Bytes
+}
+
 type Box interface {
-	// Post content and return its identifier.
-	Post(string, Bytes) Error
+	// Post content and return the creation timestamp.
+	Post(string, Bytes) (int64, Error)
 	// Read the content matching to the identifier.
-	Get(string) (Bytes, Error)
+	Get(string) (Data, Error)
+	// Read content that creation time falls between the given times.
+	GetFromPeriod(int64, int64) ([]Data, Error)
 	// Remove the content matching to the identifier.
 	Delete(string) Error
 	// Remove all its existing contents.
