@@ -180,6 +180,9 @@ func TestProvider_Delete(t *testing.T) {
 		got := p.Delete("box_1")
 
 		assert.Nil(t, got)
+		assert.NotContainsFunc(t, p.boxes, "box_1", func(b *box, id string) bool {
+			return b.id == id
+		})
 		if _, err := os.Stat(filepath.Join(path, dir, "box_1")); err == nil {
 			t.Error("didn't delete box folder")
 		} else if !os.IsNotExist(err) {

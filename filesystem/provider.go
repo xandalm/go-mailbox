@@ -57,6 +57,10 @@ func (p *provider) insertBoxAt(pos int, b *box) {
 	p.boxes = slices.Insert(p.boxes, pos, b)
 }
 
+func (p *provider) removeBoxAt(pos int) {
+	p.boxes = slices.Delete(p.boxes, pos, pos+1)
+}
+
 func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
@@ -88,8 +92,13 @@ func (p *provider) Contains(id string) (bool, mailbox.Error) {
 }
 
 func (p *provider) Delete(id string) mailbox.Error {
+	pos, has := p.boxPosition(id)
+	if !has {
+		return nil
+	}
 	if err := os.RemoveAll(join(p.path, id)); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}
+	p.removeBoxAt(pos)
 	return nil
 }
