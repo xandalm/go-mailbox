@@ -73,8 +73,34 @@ func (b *box) Get(k string) (mailbox.Data, mailbox.Error) {
 	return data, nil
 }
 
-func (b *box) GetFromPeriod(int64, int64) ([]mailbox.Data, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	data := make([]mailbox.Data, 0)
+
+	elem := b.data.Front()
+	for {
+		if elem == nil {
+			break
+		}
+		if elem.Value.(*registry).ct >= begin {
+			break
+		}
+		elem = elem.Next()
+	}
+	for {
+		if elem == nil {
+			break
+		}
+		reg := elem.Value.(*registry)
+		if reg.ct > end {
+			break
+		}
+		data = append(data, mailbox.Data{CreationTime: reg.ct, Content: reg.c})
+		elem = elem.Next()
+	}
+	return data, nil
 }
 
 func (b *box) Post(id string, c Bytes) (int64, mailbox.Error) {
