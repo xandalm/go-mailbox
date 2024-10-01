@@ -1,7 +1,9 @@
 package filesystem
 
 import (
+	"bytes"
 	"testing"
+	"time"
 
 	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
@@ -62,6 +64,41 @@ func TestBox_Get(t *testing.T) {
 
 		assert.Zero(t, data)
 		assert.Error(t, err, ErrContentNotFound)
+	})
+
+	t.Cleanup(newCleanUpFunc(p))
+}
+
+func TestBox_GetFromPeriod(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	p := createProvider(path, dir)
+	id := "box_1"
+	b := createBox(p, id)
+	createBoxContentFile(b, "b2f07", Bytes("foo"))
+	time.Sleep(time.Millisecond)
+	createBoxContentFile(b, "f348c", Bytes("bar"))
+	time.Sleep(time.Millisecond)
+	createBoxContentFile(b, "a5c01", Bytes("baz"))
+
+	end := time.Now().UnixNano()
+	begin := end - int64(2*time.Millisecond)
+
+	got, err := b.GetFromPeriod(begin, end)
+
+	assert.Nil(t, err)
+	assert.NotNil(t, got)
+
+	assert.NotEmpty(t, got)
+	if len(got) != 2 {
+		t.Fatalf("didn't get expected length, got %d want 2", len(got))
+	}
+
+	assert.EqualFunc(t, got[0], mailbox.Data{Content: Bytes("bar")}, func(a, b mailbox.Data) bool {
+		return bytes.Equal(a.Content, b.Content)
+	})
+	assert.EqualFunc(t, got[1], mailbox.Data{Content: Bytes("baz")}, func(a, b mailbox.Data) bool {
+		return bytes.Equal(a.Content, b.Content)
 	})
 
 	t.Cleanup(newCleanUpFunc(p))

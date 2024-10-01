@@ -2,6 +2,8 @@ package filesystem
 
 import (
 	"os"
+	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -77,7 +79,42 @@ func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
 
 // Get implements mailbox.Box.
 func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
-	panic("unimplemented")
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	_begin := time.Unix(0, begin)
+	_end := time.Unix(0, end)
+
+	ret := make([]mailbox.Data, 0)
+
+	path := b.f.Name()
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return nil, mailbox.ErrUnableToReadContent
+	}
+	for _, file := range files {
+		info, err := file.Info()
+		if err != nil {
+			return nil, mailbox.ErrUnableToReadContent
+		}
+		if info.ModTime().Before(_begin) || info.ModTime().After(_end) {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(path, file.Name()))
+		if err != nil {
+			return nil, mailbox.ErrUnableToReadContent
+		}
+		mData := mailbox.Data{
+			CreationTime: info.ModTime().UnixNano(),
+			Content:      data,
+		}
+		pos, _ := slices.BinarySearchFunc(ret, mData, func(a, b mailbox.Data) int {
+			return int(a.CreationTime) - int(b.CreationTime)
+		})
+		ret = slices.Insert(ret, pos, mData)
+	}
+
+	return ret, nil
 }
 
 // Post implements mailbox.Box.
