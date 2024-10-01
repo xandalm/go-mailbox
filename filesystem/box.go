@@ -3,6 +3,7 @@ package filesystem
 import (
 	"os"
 	"sync"
+	"time"
 
 	"github.com/xandalm/go-mailbox"
 )
@@ -55,40 +56,58 @@ func (b *box) Delete(id string) mailbox.Error {
 }
 
 // Get implements mailbox.Box.
-func (b *box) Get(id string) (Bytes, mailbox.Error) {
+func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	name := join(b.f.Name(), id)
 	if _, err := os.Stat(name); os.IsNotExist(err) {
-		return nil, ErrContentNotFound
+		return mailbox.Data{}, ErrContentNotFound
 	} else if err != nil {
-		return nil, mailbox.ErrUnableToReadContent
+		return mailbox.Data{}, mailbox.ErrUnableToReadContent
 	}
 	data, err := os.ReadFile(name)
 	if err != nil {
-		return nil, mailbox.ErrUnableToReadContent
+		return mailbox.Data{}, mailbox.ErrUnableToReadContent
 	}
-	return data, nil
+	return mailbox.Data{
+		Content: data,
+	}, nil
+}
+
+// Get implements mailbox.Box.
+func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
+	panic("unimplemented")
 }
 
 // Post implements mailbox.Box.
-func (b *box) Post(id string, c Bytes) mailbox.Error {
+func (b *box) Post(id string, c Bytes) (int64, mailbox.Error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	if c == nil {
-		return ErrPostingNilContent
+		return 0, ErrPostingNilContent
 	}
 	name := join(b.f.Name(), id)
 	if _, err := os.Stat(name); err == nil {
-		return ErrRepeatedContentIdentifier
+		return 0, ErrRepeatedContentIdentifier
 	} else if !os.IsNotExist(err) {
-		return mailbox.ErrUnableToPostContent
+		return 0, mailbox.ErrUnableToPostContent
 	}
-	err := os.WriteFile(name, c, 0666)
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		return mailbox.ErrUnableToPostContent
+		return 0, mailbox.ErrUnableToPostContent
 	}
-	return nil
+	ct := time.Now()
+	_, err = f.Write(c)
+	if err != nil {
+		f.Close()
+		os.Remove(name)
+		return 0, mailbox.ErrUnableToPostContent
+	}
+	if stat, err := f.Stat(); err == nil {
+		ct = stat.ModTime()
+	}
+	f.Close()
+	return ct.UnixNano(), nil
 }

@@ -3,6 +3,7 @@ package filesystem
 import (
 	"testing"
 
+	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -15,21 +16,24 @@ func TestBox_Post(t *testing.T) {
 
 	t.Run("post content", func(t *testing.T) {
 		content := Bytes("foo")
-		err := b.Post("1", content)
+		ct, err := b.Post("1", content)
 
 		assert.Nil(t, err)
+		assert.NotZero(t, ct)
 		assertContentFileHasData(t, b, "1", content)
 	})
 
 	t.Run("returns error because id duplication", func(t *testing.T) {
 		assertContentFileExists(t, b, "1")
 
-		err := b.Post("1", Bytes("bar"))
+		ct, err := b.Post("1", Bytes("bar"))
+		assert.Zero(t, ct)
 		assert.Error(t, err, ErrRepeatedContentIdentifier)
 	})
 
 	t.Run("returns error because nil content", func(t *testing.T) {
-		err := b.Post("2", nil)
+		ct, err := b.Post("2", nil)
+		assert.Zero(t, ct)
 		assert.Error(t, err, ErrPostingNilContent)
 	})
 
@@ -50,13 +54,13 @@ func TestBox_Get(t *testing.T) {
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
 
-		assert.Equal(t, got, Bytes("foo"))
+		assert.Equal(t, got, mailbox.Data{Content: Bytes("foo")})
 	})
 
 	t.Run("returns error because post file don't exist", func(t *testing.T) {
 		data, err := b.Get("2")
 
-		assert.Nil(t, data)
+		assert.Zero(t, data)
 		assert.Error(t, err, ErrContentNotFound)
 	})
 
