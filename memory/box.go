@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"container/list"
 	"sync"
 	"time"
 
@@ -14,14 +15,22 @@ var (
 
 type Bytes = mailbox.Bytes
 
+type registry struct {
+	id string
+	ct int64
+	c  Bytes
+}
+
 type box struct {
 	mu       sync.RWMutex
-	contents map[string]Bytes
+	data     *list.List
+	dataById map[string]*list.Element
 }
 
 func newBox() *box {
 	return &box{
-		contents: make(map[string]Bytes),
+		data:     list.New(),
+		dataById: map[string]*list.Element{},
 	}
 }
 
@@ -29,7 +38,8 @@ func (b *box) Clean() mailbox.Error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	clear(b.contents)
+	clear(b.dataById)
+	b.data = b.data.Init()
 	return nil
 }
 
@@ -37,7 +47,10 @@ func (b *box) Delete(k string) mailbox.Error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	delete(b.contents, k)
+	if e, ok := b.dataById[k]; ok {
+		b.data.Remove(e)
+		delete(b.dataById, k)
+	}
 	return nil
 }
 
@@ -45,8 +58,16 @@ func (b *box) Get(k string) (mailbox.Data, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
+	var reg *registry
+	if elem, ok := b.dataById[k]; !ok {
+		return mailbox.Data{}, nil
+	} else {
+		reg = elem.Value.(*registry)
+	}
+
 	data := mailbox.Data{
-		Content: b.contents[k],
+		CreationTime: reg.ct,
+		Content:      reg.c,
 	}
 
 	return data, nil
@@ -64,10 +85,14 @@ func (b *box) Post(id string, c Bytes) (int64, mailbox.Error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if _, ok := b.contents[id]; ok {
+	if _, ok := b.dataById[id]; ok {
 		return 0, ErrRepeatedContentIdentifier
 	}
-	ct := time.Now().UnixNano()
-	b.contents[id] = c
-	return ct, nil
+	reg := &registry{
+		id,
+		time.Now().UnixNano(),
+		c,
+	}
+	b.dataById[id] = b.data.PushBack(reg)
+	return reg.ct, nil
 }
