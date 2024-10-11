@@ -73,18 +73,18 @@ func (b *box) Get(k string) (mailbox.Data, mailbox.Error) {
 	return data, nil
 }
 
-func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
+func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	data := make([]mailbox.Data, 0)
+	ids := make([]string, 0)
 
 	elem := b.data.Front()
 	for {
 		if elem == nil {
 			break
 		}
-		if elem.Value.(*registry).ct >= begin {
+		if elem.Value.(*registry).ct >= begin.UnixNano() {
 			break
 		}
 		elem = elem.Next()
@@ -94,31 +94,32 @@ func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
 			break
 		}
 		reg := elem.Value.(*registry)
-		if reg.ct > end {
+		if reg.ct > end.UnixNano() {
 			break
 		}
-		data = append(data, mailbox.Data{CreationTime: reg.ct, Content: reg.c})
+		ids = append(ids, reg.id)
 		elem = elem.Next()
 	}
-	return data, nil
+	return ids, nil
 }
 
-func (b *box) Post(id string, c Bytes) (int64, mailbox.Error) {
+func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
 	if c == nil {
-		return 0, ErrPostingNilContent
+		return nil, ErrPostingNilContent
 	}
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	if _, ok := b.dataById[id]; ok {
-		return 0, ErrRepeatedContentIdentifier
+		return nil, ErrRepeatedContentIdentifier
 	}
+	now := time.Now()
 	reg := &registry{
 		id,
-		time.Now().UnixNano(),
+		now.UnixNano(),
 		c,
 	}
 	b.dataById[id] = b.data.PushBack(reg)
-	return reg.ct, nil
+	return &now, nil
 }

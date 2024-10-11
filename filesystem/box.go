@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"os"
-	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -77,15 +76,13 @@ func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
 	}, nil
 }
 
-// Get implements mailbox.Box.
-func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
+// ListFromPeriod implements mailbox.Box.
+func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	_begin := time.Unix(0, begin)
-	_end := time.Unix(0, end)
-
-	ret := make([]mailbox.Data, 0)
+	ret := make([]string, 0)
+	idx := make([]int64, 0)
 
 	path := b.f.Name()
 	files, err := os.ReadDir(path)
@@ -97,54 +94,48 @@ func (b *box) GetFromPeriod(begin, end int64) ([]mailbox.Data, mailbox.Error) {
 		if err != nil {
 			return nil, mailbox.ErrUnableToReadContent
 		}
-		if info.ModTime().Before(_begin) || info.ModTime().After(_end) {
+		if info.ModTime().Before(begin) || info.ModTime().After(end) {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(path, file.Name()))
-		if err != nil {
-			return nil, mailbox.ErrUnableToReadContent
-		}
-		mData := mailbox.Data{
-			CreationTime: info.ModTime().UnixNano(),
-			Content:      data,
-		}
-		pos, _ := slices.BinarySearchFunc(ret, mData, func(a, b mailbox.Data) int {
-			return int(a.CreationTime) - int(b.CreationTime)
+		ct := info.ModTime().UnixNano()
+		pos, _ := slices.BinarySearchFunc(idx, ct, func(a, b int64) int {
+			return int(a - b)
 		})
-		ret = slices.Insert(ret, pos, mData)
+		idx = slices.Insert(idx, pos, ct)
+		ret = slices.Insert(ret, pos, file.Name())
 	}
 
 	return ret, nil
 }
 
 // Post implements mailbox.Box.
-func (b *box) Post(id string, c Bytes) (int64, mailbox.Error) {
+func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	if c == nil {
-		return 0, ErrPostingNilContent
+		return nil, ErrPostingNilContent
 	}
 	name := join(b.f.Name(), id)
 	if _, err := os.Stat(name); err == nil {
-		return 0, ErrRepeatedContentIdentifier
+		return nil, ErrRepeatedContentIdentifier
 	} else if !os.IsNotExist(err) {
-		return 0, mailbox.ErrUnableToPostContent
+		return nil, mailbox.ErrUnableToPostContent
 	}
 	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
-		return 0, mailbox.ErrUnableToPostContent
+		return nil, mailbox.ErrUnableToPostContent
 	}
 	ct := time.Now()
 	_, err = f.Write(c)
 	if err != nil {
 		f.Close()
 		os.Remove(name)
-		return 0, mailbox.ErrUnableToPostContent
+		return nil, mailbox.ErrUnableToPostContent
 	}
 	if stat, err := f.Stat(); err == nil {
 		ct = stat.ModTime()
 	}
 	f.Close()
-	return ct.UnixNano(), nil
+	return &ct, nil
 }

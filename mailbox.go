@@ -1,5 +1,7 @@
 package mailbox
 
+import "time"
+
 type Error interface {
 	sign() string
 	Error() string
@@ -83,11 +85,12 @@ type Data struct {
 
 type Box interface {
 	// Post content and return the creation timestamp.
-	Post(string, Bytes) (int64, Error)
+	Post(string, Bytes) (*time.Time, Error)
 	// Read the content matching to the identifier.
 	Get(string) (Data, Error)
-	// Read content that creation time falls between the given times.
-	GetFromPeriod(int64, int64) ([]Data, Error)
+	// List content identifiers that creation time falls between the given times.
+	// The returning data is sorted by creation time in ascending mode.
+	ListFromPeriod(time.Time, time.Time) ([]string, Error)
 	// Remove the content matching to the identifier.
 	Delete(string) Error
 	// Remove all its existing contents.

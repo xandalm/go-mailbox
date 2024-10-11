@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"bytes"
 	"testing"
 	"time"
 
@@ -69,7 +68,7 @@ func TestBox_Get(t *testing.T) {
 	t.Cleanup(newCleanUpFunc(p))
 }
 
-func TestBox_GetFromPeriod(t *testing.T) {
+func TestBox_ListFromPeriod(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
 	p := createProvider(path, dir)
@@ -81,10 +80,10 @@ func TestBox_GetFromPeriod(t *testing.T) {
 	time.Sleep(time.Millisecond)
 	createBoxContentFile(b, "a5c01", Bytes("baz"))
 
-	end := time.Now().UnixNano()
-	begin := end - int64(2*time.Millisecond)
+	end := time.Now()
+	begin := end.Add(-2 * time.Millisecond)
 
-	got, err := b.GetFromPeriod(begin, end)
+	got, err := b.ListFromPeriod(begin, end)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, got)
@@ -94,12 +93,8 @@ func TestBox_GetFromPeriod(t *testing.T) {
 		t.Fatalf("didn't get expected length, got %d want 2", len(got))
 	}
 
-	assert.EqualFunc(t, got[0], mailbox.Data{Content: Bytes("bar")}, func(a, b mailbox.Data) bool {
-		return bytes.Equal(a.Content, b.Content)
-	})
-	assert.EqualFunc(t, got[1], mailbox.Data{Content: Bytes("baz")}, func(a, b mailbox.Data) bool {
-		return bytes.Equal(a.Content, b.Content)
-	})
+	assert.Equal(t, got[0], "f348c")
+	assert.Equal(t, got[1], "a5c01")
 
 	t.Cleanup(newCleanUpFunc(p))
 }

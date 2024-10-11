@@ -3,13 +3,14 @@ package mailbox
 import (
 	"slices"
 	"testing"
+	"time"
 )
 
 type stubBox struct {
 	Id string
 }
 
-func (s *stubBox) Post(string, Bytes) (int64, Error) {
+func (s *stubBox) Post(string, Bytes) (*time.Time, Error) {
 	panic("unimplemented")
 }
 
@@ -17,7 +18,7 @@ func (s *stubBox) Get(string) (Data, Error) {
 	panic("unimplemented")
 }
 
-func (s *stubBox) GetFromPeriod(begin, end int64) ([]Data, Error) {
+func (s *stubBox) ListFromPeriod(begin, end time.Time) ([]string, Error) {
 	panic("unimplemented")
 }
 
