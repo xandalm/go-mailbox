@@ -84,16 +84,22 @@ type Data struct {
 }
 
 type Box interface {
-	// Post content and return the creation timestamp.
+	// Posts content and return the creation timestamp.
 	Post(string, Bytes) (*time.Time, Error)
-	// Read the content matching to the identifier.
+	// Reads the content matching to the identifier.
 	Get(string) (Data, Error)
-	// List content identifiers that creation time falls between the given times.
-	// The returning data is sorted by creation time in ascending mode.
+	// Periodically reads the content matching the given identifiers.
+	// Successfully read data will be sent to the channel provided by this method.
+	LazyGet(...string) (chan []Data, Error)
+	// Lists content identifiers that creation time falls between the given times.
+	// The list is sorted by creation time in ascending mode.
 	ListFromPeriod(time.Time, time.Time) ([]string, Error)
-	// Remove the content matching to the identifier.
+	// // Lists up to n identifiers of the most recently added content.
+	// // The list is sorted by creation time in ascending mode.
+	// ListLatest(int64) ([]string, Error)
+	// Removes the content matching to the identifier.
 	Delete(string) Error
-	// Remove all its existing contents.
+	// Removes all its existing contents.
 	Clean() Error
 }
 

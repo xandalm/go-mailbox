@@ -18,6 +18,10 @@ func (s *stubBox) Get(string) (Data, Error) {
 	panic("unimplemented")
 }
 
+func (s *stubBox) LazyGet(...string) (chan []Data, Error) {
+	panic("unimplemented")
+}
+
 func (s *stubBox) ListFromPeriod(begin, end time.Time) ([]string, Error) {
 	panic("unimplemented")
 }
