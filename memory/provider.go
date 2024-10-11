@@ -3,7 +3,7 @@ package memory
 import (
 	"sync"
 
-	mailbox "github.com/xandalm/go-mailbox"
+	"github.com/xandalm/go-mailbox"
 )
 
 var (
@@ -16,7 +16,7 @@ type provider struct {
 	boxes map[string]*box
 }
 
-func NewProvider() *provider {
+func NewProvider() mailbox.Provider {
 	return &provider{
 		boxes: make(map[string]*box),
 	}

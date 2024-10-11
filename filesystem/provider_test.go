@@ -14,7 +14,7 @@ func TestNewProvider(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"
 
-	got := NewProvider(path, dir)
+	got := NewProvider(path, dir).(*provider)
 
 	assert.NotNil(t, got)
 	if got.f == nil {
@@ -33,7 +33,7 @@ func TestNewProvider(t *testing.T) {
 		createFolder(pDirPath, "box_1")
 		createFolder(pDirPath, "box_2")
 
-		got := NewProvider(path, dir)
+		got := NewProvider(path, dir).(*provider)
 
 		assert.NotNil(t, got)
 		if got.f == nil {

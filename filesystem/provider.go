@@ -27,7 +27,7 @@ type provider struct {
 	path  string
 }
 
-func NewProvider(path, dir string) *provider {
+func NewProvider(path, dir string) mailbox.Provider {
 	path = join(path, dir)
 	err := os.MkdirAll(path, 0666)
 	if err != nil && !os.IsExist(err) {
