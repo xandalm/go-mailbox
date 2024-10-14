@@ -68,6 +68,38 @@ func TestBox_Get(t *testing.T) {
 	t.Cleanup(newCleanUpFunc(p))
 }
 
+func TestBox_LazyGet(t *testing.T) {
+	path := t.TempDir()
+	dir := "Mailbox"
+	p := createProvider(path, dir)
+	id := "box_1"
+	b := createBox(p, id)
+	createBoxContentFile(b, "1", Bytes("foo"))
+	createBoxContentFile(b, "2", Bytes("bar"))
+	createBoxContentFile(b, "3", Bytes("baz"))
+
+	t.Run("returns the content by post identifier", func(t *testing.T) {
+
+		ch := b.LazyGet("1", "2", "3")
+
+		want := []mailbox.AttemptData{
+			{Data: mailbox.Data{Content: Bytes("foo")}},
+			{Data: mailbox.Data{Content: Bytes("bar")}},
+			{Data: mailbox.Data{Content: Bytes("baz")}},
+		}
+
+		for i := 0; i < 3; i++ {
+			got := <-ch
+			assert.Nil(t, got.Error)
+			assert.NotNil(t, got)
+
+			assert.Equal(t, got, want[i])
+		}
+	})
+
+	t.Cleanup(newCleanUpFunc(p))
+}
+
 func TestBox_ListFromPeriod(t *testing.T) {
 	path := t.TempDir()
 	dir := "Mailbox"

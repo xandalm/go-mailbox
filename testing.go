@@ -18,7 +18,7 @@ func (s *stubBox) Get(string) (Data, Error) {
 	panic("unimplemented")
 }
 
-func (s *stubBox) LazyGet(...string) (chan Data, Error) {
+func (s *stubBox) LazyGet(...string) chan AttemptData {
 	panic("unimplemented")
 }
 

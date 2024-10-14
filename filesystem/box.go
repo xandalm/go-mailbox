@@ -76,6 +76,48 @@ func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
 	}, nil
 }
 
+// Get implements mailbox.Box.
+func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
+
+	ch := make(chan mailbox.AttemptData)
+
+	go func() {
+
+		for _, id := range ids {
+			b.mu.Lock()
+
+			name := join(b.f.Name(), id)
+
+			if _, err := os.Stat(name); os.IsNotExist(err) {
+				ch <- mailbox.AttemptData{
+					Error: ErrContentNotFound,
+				}
+			} else if err != nil {
+				ch <- mailbox.AttemptData{
+					Error: mailbox.ErrUnableToReadContent,
+				}
+			}
+			data, err := os.ReadFile(name)
+			if err != nil {
+				ch <- mailbox.AttemptData{
+					Error: mailbox.ErrUnableToReadContent,
+				}
+			}
+			ch <- mailbox.AttemptData{
+				Data: mailbox.Data{
+					Content: data,
+				},
+			}
+
+			b.mu.Unlock()
+		}
+
+		close(ch)
+	}()
+
+	return ch
+}
+
 // ListFromPeriod implements mailbox.Box.
 func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 	b.mu.RLock()

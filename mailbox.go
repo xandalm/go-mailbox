@@ -83,6 +83,11 @@ type Data struct {
 	Content      Bytes
 }
 
+type AttemptData struct {
+	Data  Data
+	Error Error
+}
+
 type Box interface {
 	// Posts content and return the creation timestamp.
 	Post(string, Bytes) (*time.Time, Error)
@@ -90,7 +95,7 @@ type Box interface {
 	Get(string) (Data, Error)
 	// Periodically reads the content matching the given identifiers.
 	// Successfully read data will be sent to the channel provided by this method.
-	LazyGet(...string) (chan Data, Error)
+	LazyGet(...string) chan AttemptData
 	// Lists content identifiers that creation time falls between the given times.
 	// The list is sorted by creation time in ascending mode.
 	ListFromPeriod(time.Time, time.Time) ([]string, Error)
