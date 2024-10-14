@@ -73,6 +73,37 @@ func (b *box) Get(k string) (mailbox.Data, mailbox.Error) {
 	return data, nil
 }
 
+func (b *box) LazyGet(ks ...string) (chan mailbox.Data, mailbox.Error) {
+
+	ch := make(chan mailbox.Data)
+
+	go func() {
+
+		var reg *registry
+
+		for _, k := range ks {
+			b.mu.Lock()
+
+			if elem, ok := b.dataById[k]; !ok {
+				ch <- mailbox.Data{}
+			} else {
+				reg = elem.Value.(*registry)
+			}
+
+			ch <- mailbox.Data{
+				CreationTime: reg.ct,
+				Content:      reg.c,
+			}
+
+			b.mu.Unlock()
+		}
+
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
 func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()

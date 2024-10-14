@@ -89,6 +89,48 @@ func TestBox_Get(t *testing.T) {
 	})
 }
 
+func TestBox_LazyGet(t *testing.T) {
+	t.Run("returns the content by post identifier", func(t *testing.T) {
+		b := &box{
+			data:     list.New(),
+			dataById: map[string]*list.Element{},
+		}
+
+		reg1 := &registry{"1", time.Now().UnixNano(), Bytes("foo")}
+		b.dataById[reg1.id] = b.data.PushBack(reg1)
+
+		reg2 := &registry{"2", time.Now().UnixNano(), Bytes("bar")}
+		b.dataById[reg2.id] = b.data.PushBack(reg2)
+
+		reg3 := &registry{"3", time.Now().UnixNano(), Bytes("baz")}
+		b.dataById[reg3.id] = b.data.PushBack(reg3)
+
+		ch, err := b.LazyGet("1", "2", "3")
+		want := []mailbox.Data{
+			{
+				CreationTime: reg1.ct,
+				Content:      reg1.c,
+			},
+			{
+				CreationTime: reg2.ct,
+				Content:      reg2.c,
+			},
+			{
+				CreationTime: reg3.ct,
+				Content:      reg3.c,
+			},
+		}
+
+		for i := 0; i < 3; i++ {
+			got := <-ch
+			assert.Nil(t, err)
+			assert.NotNil(t, got)
+
+			assert.Equal(t, got, want[i])
+		}
+	})
+}
+
 func TestBox_ListFromPeriod(t *testing.T) {
 	t.Run("returns the content by post identifier", func(t *testing.T) {
 		b := &box{
