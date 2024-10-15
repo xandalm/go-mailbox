@@ -78,28 +78,13 @@ func (b *box) LazyGet(ks ...string) chan mailbox.AttemptData {
 	ch := make(chan mailbox.AttemptData)
 
 	go func() {
-
-		var reg *registry
-
 		for _, k := range ks {
-			b.mu.Lock()
-
-			if elem, ok := b.dataById[k]; !ok {
-				ch <- mailbox.AttemptData{}
-			} else {
-				reg = elem.Value.(*registry)
-			}
-
+			data, err := b.Get(k)
 			ch <- mailbox.AttemptData{
-				Data: mailbox.Data{
-					CreationTime: reg.ct,
-					Content:      reg.c,
-				},
+				Data:  data,
+				Error: err,
 			}
-
-			b.mu.Unlock()
 		}
-
 		close(ch)
 	}()
 
