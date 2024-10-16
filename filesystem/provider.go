@@ -21,6 +21,7 @@ func join(s ...string) string {
 }
 
 type boxFile struct {
+	mu sync.RWMutex
 	id string
 	f  *os.File
 }
@@ -94,14 +95,14 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	p.insertBoxAt(pos, &boxFile{
+	bf := &boxFile{
 		id: id,
 		f:  f,
-	})
+	}
+	p.insertBoxAt(pos, bf)
 	return &box{
 		p:  p,
-		id: id,
-		f:  f,
+		bf: bf,
 	}, nil
 }
 
@@ -113,11 +114,10 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	if !has {
 		return nil, ErrBoxNotFound
 	}
-	f := p.boxes[pos].f
+	bf := p.boxes[pos]
 	return &box{
 		p:  p,
-		id: id,
-		f:  f,
+		bf: bf,
 	}, nil
 }
 
@@ -137,12 +137,12 @@ func (p *provider) Delete(id string) mailbox.Error {
 	if !has {
 		return nil
 	}
-	f := p.boxes[pos].f
+	bf := p.boxes[pos]
 
-	// b.mu.Lock()
-	// defer b.mu.Unlock()
+	bf.mu.Lock()
+	defer bf.mu.Unlock()
 
-	if err := f.Close(); err != nil {
+	if err := bf.f.Close(); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}
 	if err := os.RemoveAll(join(p.path, id)); err != nil {

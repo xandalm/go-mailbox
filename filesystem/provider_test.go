@@ -69,8 +69,8 @@ func TestProvider_Create(t *testing.T) {
 		assert.NotNil(t, got)
 		b := got.(*box)
 		assert.Equal(t, b.p, p)
-		assert.Equal(t, b.id, "box_1")
-		assert.NotNil(t, b.f)
+		assert.Equal(t, b.bf.id, "box_1")
+		assert.NotNil(t, b.bf.f)
 
 		assert.ContainsFunc(t, p.boxes, "box_1", func(b *boxFile, id string) bool {
 			return b.id == id
@@ -115,8 +115,8 @@ func TestProvider_Get(t *testing.T) {
 		assert.NotNil(t, got)
 		b := got.(*box)
 		assert.Equal(t, b.p, p)
-		assert.Equal(t, b.id, "box_1")
-		assert.NotNil(t, b.f)
+		assert.Equal(t, b.bf.id, "box_1")
+		assert.NotNil(t, b.bf.f)
 	})
 
 	t.Run("return error because box doesn't exist", func(t *testing.T) {

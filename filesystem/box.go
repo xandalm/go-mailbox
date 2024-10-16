@@ -3,7 +3,6 @@ package filesystem
 import (
 	"os"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/xandalm/go-mailbox"
@@ -18,33 +17,35 @@ var (
 type Bytes = mailbox.Bytes
 
 type box struct {
-	mu sync.RWMutex
-	f  *os.File
 	p  *provider
-	id string
+	bf *boxFile
 }
 
 // Clean implements mailbox.Box.
 func (b *box) Clean() mailbox.Error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.bf.mu.Lock()
+	defer b.bf.mu.Unlock()
 
-	names, err := b.f.Readdirnames(0)
+	f := b.bf.f
+
+	names, err := f.Readdirnames(0)
 	if err != nil {
 		return mailbox.ErrUnableToCleanBox
 	}
 	for _, name := range names {
-		os.Remove(join(b.f.Name(), name))
+		os.Remove(join(f.Name(), name))
 	}
 	return nil
 }
 
 // Delete implements mailbox.Box.
 func (b *box) Delete(id string) mailbox.Error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.bf.mu.Lock()
+	defer b.bf.mu.Unlock()
 
-	name := join(b.f.Name(), id)
+	f := b.bf.f
+
+	name := join(f.Name(), id)
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return nil
 	} else if err != nil {
@@ -58,10 +59,12 @@ func (b *box) Delete(id string) mailbox.Error {
 
 // Get implements mailbox.Box.
 func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+	b.bf.mu.RLock()
+	defer b.bf.mu.RUnlock()
 
-	name := join(b.f.Name(), id)
+	f := b.bf.f
+
+	name := join(f.Name(), id)
 	if _, err := os.Stat(name); os.IsNotExist(err) {
 		return mailbox.Data{}, ErrContentNotFound
 	} else if err != nil {
@@ -97,13 +100,15 @@ func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
 
 // ListFromPeriod implements mailbox.Box.
 func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+	b.bf.mu.RLock()
+	defer b.bf.mu.RUnlock()
 
 	ret := make([]string, 0)
 	idx := make([]int64, 0)
 
-	path := b.f.Name()
+	f := b.bf.f
+
+	path := f.Name()
 	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, mailbox.ErrUnableToReadContent
@@ -129,13 +134,16 @@ func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 
 // Post implements mailbox.Box.
 func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.bf.mu.Lock()
+	defer b.bf.mu.Unlock()
 
 	if c == nil {
 		return nil, ErrPostingNilContent
 	}
-	name := join(b.f.Name(), id)
+
+	f := b.bf.f
+
+	name := join(f.Name(), id)
 	if _, err := os.Stat(name); err == nil {
 		return nil, ErrRepeatedContentIdentifier
 	} else if !os.IsNotExist(err) {

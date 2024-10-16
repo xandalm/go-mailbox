@@ -71,13 +71,12 @@ func createBox(p *provider, id string) *box {
 	p.boxes = slices.Insert(p.boxes, pos, bf)
 	return &box{
 		p:  p,
-		id: id,
-		f:  bf.f,
+		bf: bf,
 	}
 }
 
 func createBoxContentFile(b *box, id string, content Bytes) {
-	filename := filepath.Join(b.p.path, b.id, id)
+	filename := filepath.Join(b.p.path, b.bf.id, id)
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		log.Fatalf("unable to create box content file, %v", err)
@@ -88,7 +87,7 @@ func createBoxContentFile(b *box, id string, content Bytes) {
 
 func isContentFileCreated(b *box, id string) bool {
 
-	_, err := os.Stat(filepath.Join(b.p.path, b.id, id))
+	_, err := os.Stat(filepath.Join(b.p.path, b.bf.id, id))
 	if err == nil {
 		return true
 	}
@@ -121,7 +120,7 @@ func assertContentFileHasData(t *testing.T, b *box, id string, content Bytes) {
 	if !isContentFileCreated(b, id) {
 		t.Fatalf("the box folder didn't have content file with id=%q", id)
 	}
-	f, err := os.Open(filepath.Join(b.p.path, b.id, id))
+	f, err := os.Open(filepath.Join(b.p.path, b.bf.id, id))
 	if err != nil {
 		log.Fatal("unable to open box content file")
 	}
