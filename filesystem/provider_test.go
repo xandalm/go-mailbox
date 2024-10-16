@@ -44,10 +44,10 @@ func TestNewProvider(t *testing.T) {
 			t.Errorf("got provider path %s, but want %s", got.path, wantPath)
 		}
 
-		assert.ContainsFunc(t, got.boxes, "box_1", func(b *box, id string) bool {
+		assert.ContainsFunc(t, got.boxes, "box_1", func(b *boxFile, id string) bool {
 			return b.id == id
 		})
-		assert.ContainsFunc(t, got.boxes, "box_2", func(b *box, id string) bool {
+		assert.ContainsFunc(t, got.boxes, "box_2", func(b *boxFile, id string) bool {
 			return b.id == id
 		})
 
@@ -72,7 +72,7 @@ func TestProvider_Create(t *testing.T) {
 		assert.Equal(t, b.id, "box_1")
 		assert.NotNil(t, b.f)
 
-		assert.ContainsFunc(t, p.boxes, "box_1", func(b *box, id string) bool {
+		assert.ContainsFunc(t, p.boxes, "box_1", func(b *boxFile, id string) bool {
 			return b.id == id
 		})
 		entry, osErr := os.ReadDir(filepath.Join(p.path))
@@ -164,7 +164,7 @@ func TestProvider_Delete(t *testing.T) {
 		got := p.Delete("box_1")
 
 		assert.Nil(t, got)
-		assert.NotContainsFunc(t, p.boxes, "box_1", func(b *box, id string) bool {
+		assert.NotContainsFunc(t, p.boxes, "box_1", func(b *boxFile, id string) bool {
 			return b.id == id
 		})
 		if _, err := os.Stat(filepath.Join(path, dir, "box_1")); err == nil {

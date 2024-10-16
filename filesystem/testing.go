@@ -48,7 +48,7 @@ func createProvider(path, dir string) *provider {
 	p := &provider{
 		sync.RWMutex{},
 		f,
-		[]*box{},
+		[]*boxFile{},
 		path,
 	}
 	return p
@@ -57,21 +57,23 @@ func createProvider(path, dir string) *provider {
 func createBox(p *provider, id string) *box {
 	createFolder(p.path, id)
 	path := filepath.Join(p.path, id)
-	pos, _ := slices.BinarySearchFunc(p.boxes, id, func(b *box, id string) int {
+	pos, _ := slices.BinarySearchFunc(p.boxes, id, func(b *boxFile, id string) int {
 		return strings.Compare(b.id, id)
 	})
 	f, err := os.Open(path)
 	if err != nil {
 		log.Fatalf("unable to open box file, %v", err)
 	}
-	b := &box{
-		sync.RWMutex{},
-		f,
-		p,
-		id,
+	bf := &boxFile{
+		id: id,
+		f:  f,
 	}
-	p.boxes = slices.Insert(p.boxes, pos, b)
-	return b
+	p.boxes = slices.Insert(p.boxes, pos, bf)
+	return &box{
+		p:  p,
+		id: id,
+		f:  bf.f,
+	}
 }
 
 func createBoxContentFile(b *box, id string, content Bytes) {

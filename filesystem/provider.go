@@ -20,10 +20,15 @@ func join(s ...string) string {
 	return filepath.Join(s...)
 }
 
+type boxFile struct {
+	id string
+	f  *os.File
+}
+
 type provider struct {
 	mu    sync.RWMutex
 	f     *os.File
-	boxes []*box
+	boxes []*boxFile
 	path  string
 }
 
@@ -37,7 +42,7 @@ func NewProvider(path, dir string) mailbox.Provider {
 	if err != nil {
 		panic("unable to keep directory file open")
 	}
-	p := &provider{sync.RWMutex{}, f, []*box{}, path}
+	p := &provider{sync.RWMutex{}, f, []*boxFile{}, path}
 	foundBoxes, err := f.Readdirnames(0)
 	if err != nil {
 		panic("unable to load existing boxes")
@@ -48,18 +53,21 @@ func NewProvider(path, dir string) mailbox.Provider {
 		if err != nil {
 			panic("unable to load existing boxes")
 		}
-		p.insertBoxAt(pos, &box{sync.RWMutex{}, f, p, id})
+		p.insertBoxAt(pos, &boxFile{
+			id: id,
+			f:  f,
+		})
 	}
 	return p
 }
 
 func (p *provider) boxPosition(id string) (int, bool) {
-	return slices.BinarySearchFunc(p.boxes, id, func(b *box, id string) int {
+	return slices.BinarySearchFunc(p.boxes, id, func(b *boxFile, id string) int {
 		return strings.Compare(b.id, id)
 	})
 }
 
-func (p *provider) insertBoxAt(pos int, b *box) {
+func (p *provider) insertBoxAt(pos int, b *boxFile) {
 	p.boxes = slices.Insert(p.boxes, pos, b)
 }
 
@@ -86,9 +94,15 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if err != nil {
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	b := &box{sync.RWMutex{}, f, p, id}
-	p.insertBoxAt(pos, b)
-	return b, nil
+	p.insertBoxAt(pos, &boxFile{
+		id: id,
+		f:  f,
+	})
+	return &box{
+		p:  p,
+		id: id,
+		f:  f,
+	}, nil
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
@@ -99,7 +113,12 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	if !has {
 		return nil, ErrBoxNotFound
 	}
-	return p.boxes[pos], nil
+	f := p.boxes[pos].f
+	return &box{
+		p:  p,
+		id: id,
+		f:  f,
+	}, nil
 }
 
 func (p *provider) Contains(id string) (bool, mailbox.Error) {
@@ -118,15 +137,14 @@ func (p *provider) Delete(id string) mailbox.Error {
 	if !has {
 		return nil
 	}
-	b := p.boxes[pos]
+	f := p.boxes[pos].f
 
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	// b.mu.Lock()
+	// defer b.mu.Unlock()
 
-	if err := b.f.Close(); err != nil {
+	if err := f.Close(); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}
-	b.f = nil
 	if err := os.RemoveAll(join(p.path, id)); err != nil {
 		return mailbox.ErrUnableToDeleteBox
 	}
