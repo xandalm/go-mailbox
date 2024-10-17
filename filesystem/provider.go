@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -49,15 +50,13 @@ func NewProvider(path, dir string) mailbox.Provider {
 		panic("unable to load existing boxes")
 	}
 	for _, id := range foundBoxes {
-		pos, _ := p.boxPosition(id)
 		f, err := os.Open(join(path, id))
 		if err != nil {
 			panic("unable to load existing boxes")
 		}
-		p.insertBoxAt(pos, &boxFile{
-			id: id,
-			f:  f,
-		})
+		if err = p.insertBox(&boxFile{id: id, f: f}); err != nil {
+			panic("unable to load existing boxes")
+		}
 	}
 	return p
 }
@@ -68,38 +67,76 @@ func (p *provider) boxPosition(id string) (int, bool) {
 	})
 }
 
-func (p *provider) insertBoxAt(pos int, b *boxFile) {
+func (p *provider) createBox(id string) *boxFile {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pos, has := p.boxPosition(id)
+	if has {
+		return nil
+	}
+	b := &boxFile{
+		id: id,
+	}
 	p.boxes = slices.Insert(p.boxes, pos, b)
+	return b
 }
 
-func (p *provider) removeBoxAt(pos int) {
+func (p *provider) insertBox(b *boxFile) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pos, has := p.boxPosition(b.id)
+	if has {
+		return errors.New("identifier already exists")
+	}
+	p.boxes = slices.Insert(p.boxes, pos, b)
+	return nil
+}
+
+func (p *provider) removeBox(b *boxFile) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pos, has := p.boxPosition(b.id)
+	if !has {
+		return
+	}
 	p.boxes = slices.Delete(p.boxes, pos, pos+1)
 }
 
-func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
+func (p *provider) getBox(id string) *boxFile {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	pos, has := p.boxPosition(id)
+	if !has {
+		return nil
+	}
+	return p.boxes[pos]
+}
+
+func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
-	pos, has := p.boxPosition(id)
-	if has {
+	bf := p.createBox(id)
+	if bf == nil {
 		return nil, ErrRepeatedBoxIdentifier
 	}
 	path := join(p.path, id)
-	if err := os.Mkdir(path, 0666); err != nil {
+	err := os.Mkdir(path, 0666)
+	if err != nil {
+		p.removeBox(bf)
 		return nil, mailbox.ErrUnableToCreateBox
 	}
 	f, err := os.Open(path)
 	if err != nil {
+		p.removeBox(bf)
 		return nil, mailbox.ErrUnableToCreateBox
 	}
-	bf := &boxFile{
-		id: id,
-		f:  f,
-	}
-	p.insertBoxAt(pos, bf)
+	bf.f = f
 	return &box{
 		p:  p,
 		bf: bf,
@@ -107,18 +144,14 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
 
-	pos, has := p.boxPosition(id)
-	if !has {
-		return nil, ErrBoxNotFound
+	if bf := p.getBox(id); bf != nil {
+		return &box{
+			p:  p,
+			bf: bf,
+		}, nil
 	}
-	bf := p.boxes[pos]
-	return &box{
-		p:  p,
-		bf: bf,
-	}, nil
+	return nil, ErrBoxNotFound
 }
 
 func (p *provider) Contains(id string) (bool, mailbox.Error) {
@@ -130,24 +163,21 @@ func (p *provider) Contains(id string) (bool, mailbox.Error) {
 }
 
 func (p *provider) Delete(id string) mailbox.Error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
 
-	pos, has := p.boxPosition(id)
-	if !has {
-		return nil
-	}
-	bf := p.boxes[pos]
+	bf := p.getBox(id)
 
 	bf.mu.Lock()
 	defer bf.mu.Unlock()
 
+	p.removeBox(bf)
+
 	if err := bf.f.Close(); err != nil {
+		p.insertBox(bf)
 		return mailbox.ErrUnableToDeleteBox
 	}
 	if err := os.RemoveAll(join(p.path, id)); err != nil {
+		p.insertBox(bf)
 		return mailbox.ErrUnableToDeleteBox
 	}
-	p.removeBoxAt(pos)
 	return nil
 }
