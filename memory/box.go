@@ -91,7 +91,7 @@ func (b *box) LazyGet(ks ...string) chan mailbox.AttemptData {
 	return ch
 }
 
-func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
+func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox.Error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
@@ -107,8 +107,12 @@ func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 		}
 		elem = elem.Next()
 	}
+	interrupt := func(s []string) bool { return false }
+	if limit > 0 {
+		interrupt = func(s []string) bool { return len(s) >= limit }
+	}
 	for {
-		if elem == nil {
+		if interrupt(ids) || elem == nil {
 			break
 		}
 		reg := elem.Value.(*registry)

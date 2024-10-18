@@ -22,7 +22,7 @@ func (s *stubBox) LazyGet(...string) chan AttemptData {
 	panic("unimplemented")
 }
 
-func (s *stubBox) ListFromPeriod(begin, end time.Time) ([]string, Error) {
+func (s *stubBox) ListFromPeriod(begin, end time.Time, limit int) ([]string, Error) {
 	panic("unimplemented")
 }
 

@@ -97,8 +97,11 @@ type Box interface {
 	// Successfully read data will be sent to the channel provided by this method.
 	LazyGet(...string) chan AttemptData
 	// Lists content identifiers that creation time falls between the given times.
+	// The maximum identifiers returned can be defined by the int parameter,
+	// make sure that the value less than or equal to 0 will result in all
+	// identifiers from the period.
 	// The list is sorted by creation time in ascending mode.
-	ListFromPeriod(time.Time, time.Time) ([]string, Error)
+	ListFromPeriod(time.Time, time.Time, int) ([]string, Error)
 	// // Lists up to n identifiers of the most recently added content.
 	// // The list is sorted by creation time in ascending mode.
 	// ListLatest(int64) ([]string, Error)

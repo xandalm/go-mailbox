@@ -115,7 +115,7 @@ func TestBox_ListFromPeriod(t *testing.T) {
 	end := time.Now()
 	begin := end.Add(-2 * time.Millisecond)
 
-	got, err := b.ListFromPeriod(begin, end)
+	got, err := b.ListFromPeriod(begin, end, 0)
 
 	assert.Nil(t, err)
 	assert.NotNil(t, got)

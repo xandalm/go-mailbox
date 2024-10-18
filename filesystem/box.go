@@ -99,7 +99,7 @@ func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
 }
 
 // ListFromPeriod implements mailbox.Box.
-func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
+func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox.Error) {
 	b.bf.mu.RLock()
 	defer b.bf.mu.RUnlock()
 
@@ -129,7 +129,11 @@ func (b *box) ListFromPeriod(begin, end time.Time) ([]string, mailbox.Error) {
 		ret = slices.Insert(ret, pos, file.Name())
 	}
 
-	return ret, nil
+	if limit <= 0 {
+		return ret, nil
+	}
+
+	return ret[:limit], nil
 }
 
 // Post implements mailbox.Box.

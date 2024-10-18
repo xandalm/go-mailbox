@@ -157,7 +157,7 @@ func TestBox_ListFromPeriod(t *testing.T) {
 		reg3 := &registry{"3", ct3.UnixNano(), Bytes("baz")}
 		b.dataById[reg3.id] = b.data.PushBack(reg3)
 
-		got, err := b.ListFromPeriod(ct2, ct3)
+		got, err := b.ListFromPeriod(ct2, ct3, 0)
 		want := []string{
 			reg2.id,
 			reg3.id,
