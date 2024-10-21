@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"os"
 	"slices"
 	"time"
@@ -22,7 +23,7 @@ type box struct {
 }
 
 // Clean implements mailbox.Box.
-func (b *box) Clean() mailbox.Error {
+func (b *box) CleanWithContext(_ context.Context) mailbox.Error {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
 
@@ -38,8 +39,13 @@ func (b *box) Clean() mailbox.Error {
 	return nil
 }
 
+// Clean implements mailbox.Box.
+func (b *box) Clean() mailbox.Error {
+	return b.CleanWithContext(context.TODO())
+}
+
 // Delete implements mailbox.Box.
-func (b *box) Delete(id string) mailbox.Error {
+func (b *box) DeleteWithContext(ctx context.Context, id string) mailbox.Error {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
 
@@ -57,8 +63,13 @@ func (b *box) Delete(id string) mailbox.Error {
 	return nil
 }
 
+// Delete implements mailbox.Box.
+func (b *box) Delete(id string) mailbox.Error {
+	return b.DeleteWithContext(context.TODO(), id)
+}
+
 // Get implements mailbox.Box.
-func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
+func (b *box) GetWithContext(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
 	b.bf.mu.RLock()
 	defer b.bf.mu.RUnlock()
 
@@ -80,16 +91,35 @@ func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
 }
 
 // Get implements mailbox.Box.
-func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
+func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
+	return b.GetWithContext(context.TODO(), id)
+}
+
+// LazyGet implements mailbox.Box.
+func (b *box) LazyGetWithContext(ctx context.Context, ids ...string) chan mailbox.AttemptData {
 
 	ch := make(chan mailbox.AttemptData)
 
 	go func() {
-		for _, id := range ids {
-			data, err := b.Get(id)
-			ch <- mailbox.AttemptData{
-				Data:  data,
-				Error: err,
+		get := func(ch chan mailbox.AttemptData, b *box, id string) chan struct{} {
+			ch2 := make(chan struct{})
+
+			go func() {
+				data, err := b.Get(id)
+				ch <- mailbox.AttemptData{
+					Data:  data,
+					Error: err,
+				}
+				close(ch2)
+			}()
+
+			return ch2
+		}
+		for i := 0; i < len(ids); i++ {
+			select {
+			case <-get(ch, b, ids[i]):
+			case <-ctx.Done():
+				i = len(ids)
 			}
 		}
 		close(ch)
@@ -98,8 +128,13 @@ func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
 	return ch
 }
 
+// LazyGet implements mailbox.Box.
+func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
+	return b.LazyGetWithContext(context.TODO(), ids...)
+}
+
 // ListFromPeriod implements mailbox.Box.
-func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox.Error) {
+func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
 	b.bf.mu.RLock()
 	defer b.bf.mu.RUnlock()
 
@@ -136,8 +171,13 @@ func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox
 	return ret[:limit], nil
 }
 
+// ListFromPeriod implements mailbox.Box.
+func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox.Error) {
+	return b.ListFromPeriodWithContext(context.TODO(), begin, end, limit)
+}
+
 // Post implements mailbox.Box.
-func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
+func (b *box) PostWithContext(ctx context.Context, id string, c Bytes) (*time.Time, mailbox.Error) {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
 
@@ -169,4 +209,9 @@ func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
 	}
 	f.Close()
 	return &ct, nil
+}
+
+// Post implements mailbox.Box.
+func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
+	return b.PostWithContext(context.TODO(), id, c)
 }
