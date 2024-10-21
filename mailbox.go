@@ -1,6 +1,9 @@
 package mailbox
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Error interface {
 	sign() string
@@ -91,24 +94,47 @@ type AttemptData struct {
 type Box interface {
 	// Posts content and return the creation timestamp.
 	Post(string, Bytes) (*time.Time, Error)
+	// Posts content and return the creation timestamp using the context.
+	PostWithContext(context.Context, string, Bytes) (*time.Time, Error)
+
 	// Reads the content matching to the identifier.
 	Get(string) (Data, Error)
+	// Reads the content matching to the identifier using the context.
+	GetWithContext(context.Context, string) (Data, Error)
+
 	// Periodically reads the content matching the given identifiers.
 	// Successfully read data will be sent to the channel provided by this method.
 	LazyGet(...string) chan AttemptData
+	//  Using the context, periodically reads the content matching the given identifiers.
+	// Successfully read data will be sent to the channel provided by this method.
+	LazyGetWithContext(context.Context, ...string) chan AttemptData
+
 	// Lists content identifiers that creation time falls between the given times.
 	// The maximum identifiers returned can be defined by the int parameter,
 	// make sure that the value less than or equal to 0 will result in all
 	// identifiers from the period.
 	// The list is sorted by creation time in ascending mode.
 	ListFromPeriod(time.Time, time.Time, int) ([]string, Error)
+	// Using the context, lists content identifiers that creation time falls between the given times.
+	// The maximum identifiers returned can be defined by the int parameter,
+	// make sure that the value less than or equal to 0 will result in all
+	// identifiers from the period.
+	// The list is sorted by creation time in ascending mode.
+	ListFromPeriodWithContext(context.Context, time.Time, time.Time, int) ([]string, Error)
+
 	// // Lists up to n identifiers of the most recently added content.
 	// // The list is sorted by creation time in ascending mode.
 	// ListLatest(int64) ([]string, Error)
+
 	// Removes the content matching to the identifier.
 	Delete(string) Error
+	// Removes the content matching to the identifier using the context.
+	DeleteWithContext(context.Context, string) Error
+
 	// Removes all its existing contents.
 	Clean() Error
+	// Removes all its existing contents using the context.
+	CleanWithContext(context.Context) Error
 }
 
 type manager struct {

@@ -1,6 +1,7 @@
 package mailbox
 
 import (
+	"context"
 	"slices"
 	"testing"
 	"time"
@@ -8,6 +9,36 @@ import (
 
 type stubBox struct {
 	Id string
+}
+
+// CleanWithContext implements Box.
+func (s *stubBox) CleanWithContext(context.Context) Error {
+	panic("unimplemented")
+}
+
+// DeleteWithContext implements Box.
+func (s *stubBox) DeleteWithContext(context.Context, string) Error {
+	panic("unimplemented")
+}
+
+// GetWithContext implements Box.
+func (s *stubBox) GetWithContext(context.Context, string) (Data, Error) {
+	panic("unimplemented")
+}
+
+// LazyGetWithContext implements Box.
+func (s *stubBox) LazyGetWithContext(context.Context, ...string) chan AttemptData {
+	panic("unimplemented")
+}
+
+// ListFromPeriodWithContext implements Box.
+func (s *stubBox) ListFromPeriodWithContext(context.Context, time.Time, time.Time, int) ([]string, Error) {
+	panic("unimplemented")
+}
+
+// PostWithContext implements Box.
+func (s *stubBox) PostWithContext(context.Context, string, Bytes) (*time.Time, Error) {
+	panic("unimplemented")
 }
 
 func (s *stubBox) Post(string, Bytes) (*time.Time, Error) {
