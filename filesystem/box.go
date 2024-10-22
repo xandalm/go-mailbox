@@ -70,7 +70,7 @@ func (b *box) Clean() mailbox.Error {
 }
 
 // Delete implements mailbox.Box.
-func (b *box) DeleteWithContext(ctx context.Context, id string) mailbox.Error {
+func (b *box) DeleteWithContext(_ context.Context, id string) mailbox.Error {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
 
@@ -89,20 +89,17 @@ func (b *box) Delete(id string) mailbox.Error {
 }
 
 // Get implements mailbox.Box.
-func (b *box) GetWithContext(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
+func (b *box) GetWithContext(_ context.Context, id string) (mailbox.Data, mailbox.Error) {
 	b.bf.mu.RLock()
 	defer b.bf.mu.RUnlock()
 
 	f := b.bf.f
 
-	name := join(f.Name(), id)
-	if _, err := os.Stat(name); os.IsNotExist(err) {
-		return mailbox.Data{}, ErrContentNotFound
-	} else if err != nil {
-		return mailbox.Data{}, mailbox.ErrUnableToReadContent
-	}
-	data, err := os.ReadFile(name)
+	data, err := os.ReadFile(join(f.Name(), id))
 	if err != nil {
+		if os.IsNotExist(err) {
+			return mailbox.Data{}, ErrContentNotFound
+		}
 		return mailbox.Data{}, mailbox.ErrUnableToReadContent
 	}
 	return mailbox.Data{
