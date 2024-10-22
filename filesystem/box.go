@@ -76,13 +76,8 @@ func (b *box) DeleteWithContext(ctx context.Context, id string) mailbox.Error {
 
 	f := b.bf.f
 
-	name := join(f.Name(), id)
-	if _, err := os.Stat(name); os.IsNotExist(err) {
-		return nil
-	} else if err != nil {
-		return mailbox.ErrUnableToReadContent
-	}
-	if err := os.Remove(name); err != nil {
+	err := os.Remove(join(f.Name(), id))
+	if err != nil && !os.IsNotExist(err) {
 		return mailbox.ErrUnableToDeleteContent
 	}
 	return nil
