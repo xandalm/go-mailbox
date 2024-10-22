@@ -17,24 +17,49 @@ var (
 
 type Bytes = mailbox.Bytes
 
+func getContentIdentifiers(ch chan []string, f *os.File) []string {
+	names, err := f.Readdirnames(0)
+	if err != nil {
+		ch <- nil
+		return nil
+	}
+	ch <- names
+	return names
+}
+
 type box struct {
 	p  *provider
 	bf *boxFile
 }
 
 // Clean implements mailbox.Box.
-func (b *box) CleanWithContext(_ context.Context) mailbox.Error {
+func (b *box) CleanWithContext(ctx context.Context) mailbox.Error {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
 
 	f := b.bf.f
 
-	names, err := f.Readdirnames(0)
-	if err != nil {
+	var names []string
+
+	ch1 := make(chan []string, 1)
+	go getContentIdentifiers(ch1, f)
+	select {
+	case <-ctx.Done():
 		return mailbox.ErrUnableToCleanBox
+	case got := <-ch1:
+		if got == nil {
+			return mailbox.ErrUnableToCleanBox
+		}
+		names = got
 	}
+	errCount := 0
 	for _, name := range names {
-		os.Remove(join(f.Name(), name))
+		if err := os.Remove(join(f.Name(), name)); err != nil {
+			errCount++
+		}
+	}
+	if errCount > 0 {
+		return mailbox.ErrUnableToCleanBox
 	}
 	return nil
 }
