@@ -18,44 +18,49 @@ var (
 
 type Bytes = mailbox.Bytes
 
+func getDirectoryNamesFn(ch chan []string, f *os.File) {
+	names, err := f.Readdirnames(0)
+	if err != nil {
+		ch <- nil
+	} else {
+		ch <- names
+	}
+}
+
 func getDirectoryNames(f *os.File) chan []string {
 	ch := make(chan []string, 1)
-	go func() {
-		names, err := f.Readdirnames(0)
-		if err != nil {
-			ch <- nil
-		} else {
-			ch <- names
-		}
-	}()
+	go getDirectoryNamesFn(ch, f)
 	return ch
+}
+
+func getDirectoryEntriesFn(ch chan []fs.DirEntry, f *os.File) {
+	entries, err := f.ReadDir(0)
+	if err != nil {
+		ch <- nil
+	} else {
+		ch <- entries
+	}
 }
 
 func getDirectoryEntries(f *os.File) chan []fs.DirEntry {
 	ch := make(chan []fs.DirEntry, 1)
-	go func() {
-		entries, err := f.ReadDir(0)
-		if err != nil {
-			ch <- nil
-		} else {
-			ch <- entries
-		}
-	}()
+	go getDirectoryEntriesFn(ch, f)
 	return ch
 }
+
+func getFileModTimeFn(ch chan *time.Time, e fs.DirEntry) {
+	info, err := e.Info()
+	if err != nil {
+		ch <- nil
+	} else {
+		mt := info.ModTime()
+		ch <- &mt
+	}
+}
+
 func getFileModTime(e fs.DirEntry) chan *time.Time {
 	ch := make(chan *time.Time, 1)
-
-	go func() {
-		info, err := e.Info()
-		if err != nil {
-			ch <- nil
-		} else {
-			mt := info.ModTime()
-			ch <- &mt
-		}
-	}()
-
+	go getFileModTimeFn(ch, e)
 	return ch
 }
 
