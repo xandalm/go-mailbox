@@ -18,49 +18,57 @@ var (
 
 type Bytes = mailbox.Bytes
 
-func getDirectoryNamesFn(ch chan []string, f *os.File) {
+func getDirectoryNamesFn[T []string](ch chan Data_Error[T], f *os.File) {
 	names, err := f.Readdirnames(0)
-	if err != nil {
-		ch <- nil
-	} else {
-		ch <- names
-	}
+	ch <- Data_Error[T]{names, err}
 }
 
-func getDirectoryNames(f *os.File) chan []string {
-	ch := make(chan []string, 1)
+func getDirectoryNames(f *os.File) chan Data_Error[[]string] {
+	ch := make(chan Data_Error[[]string], 1)
 	go getDirectoryNamesFn(ch, f)
 	return ch
 }
 
-func getDirectoryEntriesFn(ch chan []fs.DirEntry, f *os.File) {
+func getDirectoryEntriesFn[T []fs.DirEntry](ch chan Data_Error[T], f *os.File) {
 	entries, err := f.ReadDir(0)
-	if err != nil {
-		ch <- nil
-	} else {
-		ch <- entries
-	}
+	ch <- Data_Error[T]{entries, err}
 }
 
-func getDirectoryEntries(f *os.File) chan []fs.DirEntry {
-	ch := make(chan []fs.DirEntry, 1)
+func getDirectoryEntries(f *os.File) chan Data_Error[[]fs.DirEntry] {
+	ch := make(chan Data_Error[[]fs.DirEntry], 1)
 	go getDirectoryEntriesFn(ch, f)
 	return ch
 }
 
-func getFileModTimeFn(ch chan *time.Time, e fs.DirEntry) {
+func getFileModTimeFn[T *time.Time](ch chan Data_Error[T], e fs.DirEntry) {
 	info, err := e.Info()
-	if err != nil {
-		ch <- nil
-	} else {
-		mt := info.ModTime()
-		ch <- &mt
+	var data *time.Time
+	if err == nil {
+		t := info.ModTime()
+		data = &t
 	}
+	ch <- Data_Error[T]{data, err}
 }
 
-func getFileModTime(e fs.DirEntry) chan *time.Time {
-	ch := make(chan *time.Time, 1)
+func getFileModTime(e fs.DirEntry) chan Data_Error[*time.Time] {
+	ch := make(chan Data_Error[*time.Time], 1)
 	go getFileModTimeFn(ch, e)
+	return ch
+}
+
+type Data_Error[T any] struct {
+	data T
+	err  error
+}
+
+func readFileContentFn[T []byte](ch chan Data_Error[T], name string) {
+	data, err := os.ReadFile(name)
+	ch <- Data_Error[T]{data, err}
+}
+
+func readFileContent(name string) chan Data_Error[[]byte] {
+	ch := make(chan Data_Error[[]byte], 1)
+	go readFileContentFn(ch, name)
 	return ch
 }
 
@@ -82,10 +90,10 @@ func (b *box) CleanWithContext(ctx context.Context) mailbox.Error {
 	case <-ctx.Done():
 		return mailbox.ErrUnableToCleanBox
 	case got := <-getDirectoryNames(f):
-		if got == nil {
+		if got.err != nil {
 			return mailbox.ErrUnableToCleanBox
 		}
-		names = got
+		names = got.data
 	}
 	errCount := 0
 	for _, name := range names {
@@ -130,15 +138,15 @@ func (b *box) GetWithContext(_ context.Context, id string) (mailbox.Data, mailbo
 
 	f := b.bf.f
 
-	data, err := os.ReadFile(join(f.Name(), id))
-	if err != nil {
-		if os.IsNotExist(err) {
+	got := <-readFileContent(join(f.Name(), id))
+	if got.err != nil {
+		if os.IsNotExist(got.err) {
 			return mailbox.Data{}, ErrContentNotFound
 		}
 		return mailbox.Data{}, mailbox.ErrUnableToReadContent
 	}
 	return mailbox.Data{
-		Content: data,
+		Content: got.data,
 	}, nil
 }
 
@@ -201,10 +209,10 @@ func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Tim
 	case <-ctx.Done():
 		return ret, nil
 	case got := <-getDirectoryEntries(f):
-		if got == nil {
+		if got.err != nil {
 			return nil, mailbox.ErrUnableToReadContent
 		}
-		files = got
+		files = got.data
 	}
 
 	var err mailbox.Error
@@ -213,12 +221,12 @@ func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Tim
 		select {
 		case <-ctx.Done():
 			i = len(files)
-		case ct := <-getFileModTime(file):
-			if ct == nil {
+		case got := <-getFileModTime(file):
+			if got.err != nil {
 				err = mailbox.ErrUnableToReadContent
 				i = len(files)
-			} else if !(ct.Before(begin) || ct.After(end)) {
-				ts := ct.UnixNano()
+			} else if !(got.data.Before(begin) || got.data.After(end)) {
+				ts := got.data.UnixNano()
 				pos, _ := slices.BinarySearchFunc(idx, ts, func(a, b int64) int {
 					return int(a - b)
 				})
