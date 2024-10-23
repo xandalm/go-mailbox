@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"slices"
 	"time"
@@ -17,14 +18,45 @@ var (
 
 type Bytes = mailbox.Bytes
 
-func getContentIdentifiers(ch chan []string, f *os.File) []string {
-	names, err := f.Readdirnames(0)
-	if err != nil {
-		ch <- nil
-		return nil
-	}
-	ch <- names
-	return names
+func getDirectoryNames(f *os.File) chan []string {
+	ch := make(chan []string, 1)
+	go func() {
+		names, err := f.Readdirnames(0)
+		if err != nil {
+			ch <- nil
+		} else {
+			ch <- names
+		}
+	}()
+	return ch
+}
+
+func getDirectoryEntries(f *os.File) chan []fs.DirEntry {
+	ch := make(chan []fs.DirEntry, 1)
+	go func() {
+		entries, err := f.ReadDir(0)
+		if err != nil {
+			ch <- nil
+		} else {
+			ch <- entries
+		}
+	}()
+	return ch
+}
+func getFileModTime(e fs.DirEntry) chan *time.Time {
+	ch := make(chan *time.Time, 1)
+
+	go func() {
+		info, err := e.Info()
+		if err != nil {
+			ch <- nil
+		} else {
+			mt := info.ModTime()
+			ch <- &mt
+		}
+	}()
+
+	return ch
 }
 
 type box struct {
@@ -41,12 +73,10 @@ func (b *box) CleanWithContext(ctx context.Context) mailbox.Error {
 
 	var names []string
 
-	ch1 := make(chan []string, 1)
-	go getContentIdentifiers(ch1, f)
 	select {
 	case <-ctx.Done():
 		return mailbox.ErrUnableToCleanBox
-	case got := <-ch1:
+	case got := <-getDirectoryNames(f):
 		if got == nil {
 			return mailbox.ErrUnableToCleanBox
 		}
@@ -160,32 +190,44 @@ func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Tim
 
 	f := b.bf.f
 
-	path := f.Name()
-	files, err := os.ReadDir(path)
-	if err != nil {
-		return nil, mailbox.ErrUnableToReadContent
-	}
-	for _, file := range files {
-		info, err := file.Info()
-		if err != nil {
+	var files []fs.DirEntry
+
+	select {
+	case <-ctx.Done():
+		return ret, nil
+	case got := <-getDirectoryEntries(f):
+		if got == nil {
 			return nil, mailbox.ErrUnableToReadContent
 		}
-		if info.ModTime().Before(begin) || info.ModTime().After(end) {
-			continue
+		files = got
+	}
+
+	var err mailbox.Error
+	for i := 0; i < len(files); i++ {
+		file := files[i]
+		select {
+		case <-ctx.Done():
+			i = len(files)
+		case ct := <-getFileModTime(file):
+			if ct == nil {
+				err = mailbox.ErrUnableToReadContent
+				i = len(files)
+			} else if !(ct.Before(begin) || ct.After(end)) {
+				ts := ct.UnixNano()
+				pos, _ := slices.BinarySearchFunc(idx, ts, func(a, b int64) int {
+					return int(a - b)
+				})
+				idx = slices.Insert(idx, pos, ts)
+				ret = slices.Insert(ret, pos, file.Name())
+			}
 		}
-		ct := info.ModTime().UnixNano()
-		pos, _ := slices.BinarySearchFunc(idx, ct, func(a, b int64) int {
-			return int(a - b)
-		})
-		idx = slices.Insert(idx, pos, ct)
-		ret = slices.Insert(ret, pos, file.Name())
 	}
 
 	if limit <= 0 {
-		return ret, nil
+		return ret, err
 	}
 
-	return ret[:limit], nil
+	return ret[:limit], err
 }
 
 // ListFromPeriod implements mailbox.Box.
