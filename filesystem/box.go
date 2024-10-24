@@ -18,57 +18,85 @@ var (
 
 type Bytes = mailbox.Bytes
 
-func getDirectoryNamesFn[T []string](ch chan Data_Error[T], f *os.File) {
-	names, err := f.Readdirnames(0)
-	ch <- Data_Error[T]{names, err}
-}
-
-func getDirectoryNames(f *os.File) chan Data_Error[[]string] {
-	ch := make(chan Data_Error[[]string], 1)
-	go getDirectoryNamesFn(ch, f)
-	return ch
-}
-
-func getDirectoryEntriesFn[T []fs.DirEntry](ch chan Data_Error[T], f *os.File) {
-	entries, err := f.ReadDir(0)
-	ch <- Data_Error[T]{entries, err}
-}
-
-func getDirectoryEntries(f *os.File) chan Data_Error[[]fs.DirEntry] {
-	ch := make(chan Data_Error[[]fs.DirEntry], 1)
-	go getDirectoryEntriesFn(ch, f)
-	return ch
-}
-
-func getFileModTimeFn[T *time.Time](ch chan Data_Error[T], e fs.DirEntry) {
-	info, err := e.Info()
-	var data *time.Time
-	if err == nil {
-		t := info.ModTime()
-		data = &t
-	}
-	ch <- Data_Error[T]{data, err}
-}
-
-func getFileModTime(e fs.DirEntry) chan Data_Error[*time.Time] {
-	ch := make(chan Data_Error[*time.Time], 1)
-	go getFileModTimeFn(ch, e)
-	return ch
-}
-
-type Data_Error[T any] struct {
+type ioResult[T any] struct {
 	data T
 	err  error
 }
 
-func readFileContentFn[T []byte](ch chan Data_Error[T], name string) {
-	data, err := os.ReadFile(name)
-	ch <- Data_Error[T]{data, err}
+func getDirectoryNamesFn[T []string](ch chan ioResult[T], f *os.File) {
+	names, err := f.Readdirnames(0)
+	ch <- ioResult[T]{names, err}
 }
 
-func readFileContent(name string) chan Data_Error[[]byte] {
-	ch := make(chan Data_Error[[]byte], 1)
+func getDirectoryNames(f *os.File) chan ioResult[[]string] {
+	ch := make(chan ioResult[[]string], 1)
+	go getDirectoryNamesFn(ch, f)
+	return ch
+}
+
+func getDirectoryEntriesFn[T []fs.DirEntry](ch chan ioResult[T], f *os.File) {
+	entries, err := f.ReadDir(0)
+	ch <- ioResult[T]{entries, err}
+}
+
+func getDirectoryEntries(f *os.File) chan ioResult[[]fs.DirEntry] {
+	ch := make(chan ioResult[[]fs.DirEntry], 1)
+	go getDirectoryEntriesFn(ch, f)
+	return ch
+}
+
+func getFileInfoFromDirEntryFn[T *fs.FileInfo](ch chan ioResult[T], e fs.DirEntry) {
+	info, err := e.Info()
+	ch <- ioResult[T]{&info, err}
+}
+
+func getFileInfoFromDirEntry(e fs.DirEntry) chan ioResult[*fs.FileInfo] {
+	ch := make(chan ioResult[*fs.FileInfo], 1)
+	go getFileInfoFromDirEntryFn(ch, e)
+	return ch
+}
+
+func getFileInfoFn[T *fs.FileInfo](ch chan ioResult[T], name string) {
+	info, err := os.Stat(name)
+	ch <- ioResult[T]{&info, err}
+}
+
+func getFileInfo(name string) chan ioResult[*fs.FileInfo] {
+	ch := make(chan ioResult[*fs.FileInfo], 1)
+	go getFileInfoFn(ch, name)
+	return ch
+}
+
+func readFileContentFn[T []byte](ch chan ioResult[T], name string) {
+	data, err := os.ReadFile(name)
+	ch <- ioResult[T]{data, err}
+}
+
+func readFileContent(name string) chan ioResult[[]byte] {
+	ch := make(chan ioResult[[]byte], 1)
 	go readFileContentFn(ch, name)
+	return ch
+}
+
+func openFileFn[T *os.File](ch chan ioResult[T], name string) {
+	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
+	ch <- ioResult[T]{f, err}
+}
+
+func openFile(name string) chan ioResult[*os.File] {
+	ch := make(chan ioResult[*os.File], 1)
+	go openFileFn(ch, name)
+	return ch
+}
+
+func writeContentFn(ch chan bool, f *os.File, c []byte) {
+	_, err := f.Write(c)
+	ch <- (err == nil)
+}
+
+func writeContent(f *os.File, c []byte) chan bool {
+	ch := make(chan bool, 1)
+	go writeContentFn(ch, f, c)
 	return ch
 }
 
@@ -77,7 +105,7 @@ type box struct {
 	bf *boxFile
 }
 
-// Clean implements mailbox.Box.
+// CleanWithContext implements mailbox.Box.
 func (b *box) CleanWithContext(ctx context.Context) mailbox.Error {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
@@ -112,7 +140,7 @@ func (b *box) Clean() mailbox.Error {
 	return b.CleanWithContext(context.TODO())
 }
 
-// Delete implements mailbox.Box.
+// DeleteWithContext implements mailbox.Box.
 func (b *box) DeleteWithContext(_ context.Context, id string) mailbox.Error {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
@@ -131,7 +159,7 @@ func (b *box) Delete(id string) mailbox.Error {
 	return b.DeleteWithContext(context.TODO(), id)
 }
 
-// Get implements mailbox.Box.
+// GetWithContext implements mailbox.Box.
 func (b *box) GetWithContext(_ context.Context, id string) (mailbox.Data, mailbox.Error) {
 	b.bf.mu.RLock()
 	defer b.bf.mu.RUnlock()
@@ -155,7 +183,7 @@ func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
 	return b.GetWithContext(context.TODO(), id)
 }
 
-// LazyGet implements mailbox.Box.
+// LazyGetWithContext implements mailbox.Box.
 func (b *box) LazyGetWithContext(ctx context.Context, ids ...string) chan mailbox.AttemptData {
 
 	ch := make(chan mailbox.AttemptData)
@@ -193,7 +221,7 @@ func (b *box) LazyGet(ids ...string) chan mailbox.AttemptData {
 	return b.LazyGetWithContext(context.TODO(), ids...)
 }
 
-// ListFromPeriod implements mailbox.Box.
+// ListFromPeriodWithContext implements mailbox.Box.
 func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
 	b.bf.mu.RLock()
 	defer b.bf.mu.RUnlock()
@@ -221,17 +249,20 @@ func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Tim
 		select {
 		case <-ctx.Done():
 			i = len(files)
-		case got := <-getFileModTime(file):
+		case got := <-getFileInfoFromDirEntry(file):
 			if got.err != nil {
 				err = mailbox.ErrUnableToReadContent
 				i = len(files)
-			} else if !(got.data.Before(begin) || got.data.After(end)) {
-				ts := got.data.UnixNano()
-				pos, _ := slices.BinarySearchFunc(idx, ts, func(a, b int64) int {
-					return int(a - b)
-				})
-				idx = slices.Insert(idx, pos, ts)
-				ret = slices.Insert(ret, pos, file.Name())
+			} else {
+				ct := (*got.data).ModTime()
+				if !(ct.Before(begin) || ct.After(end)) {
+					ts := ct.UnixNano()
+					pos, _ := slices.BinarySearchFunc(idx, ts, func(a, b int64) int {
+						return int(a - b)
+					})
+					idx = slices.Insert(idx, pos, ts)
+					ret = slices.Insert(ret, pos, file.Name())
+				}
 			}
 		}
 	}
@@ -248,7 +279,7 @@ func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox
 	return b.ListFromPeriodWithContext(context.TODO(), begin, end, limit)
 }
 
-// Post implements mailbox.Box.
+// PostWithContext implements mailbox.Box.
 func (b *box) PostWithContext(ctx context.Context, id string, c Bytes) (*time.Time, mailbox.Error) {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
@@ -260,25 +291,45 @@ func (b *box) PostWithContext(ctx context.Context, id string, c Bytes) (*time.Ti
 	f := b.bf.f
 
 	name := join(f.Name(), id)
-	if _, err := os.Stat(name); err == nil {
-		return nil, ErrRepeatedContentIdentifier
-	} else if !os.IsNotExist(err) {
+
+	select {
+	case <-ctx.Done():
 		return nil, mailbox.ErrUnableToPostContent
+	case got := <-getFileInfo(name):
+		err := got.err
+		if err == nil {
+			return nil, ErrRepeatedContentIdentifier
+		} else if !os.IsNotExist(err) {
+			return nil, mailbox.ErrUnableToPostContent
+		}
 	}
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
-	if err != nil {
+
+	select {
+	case <-ctx.Done():
+		os.Remove(name)
 		return nil, mailbox.ErrUnableToPostContent
+	case got := <-openFile(name):
+		if got.err != nil {
+			return nil, mailbox.ErrUnableToPostContent
+		}
+		f = got.data
 	}
+
 	ct := time.Now()
-	_, err = f.Write(c)
-	if err != nil {
+
+	select {
+	case <-ctx.Done():
 		f.Close()
 		os.Remove(name)
 		return nil, mailbox.ErrUnableToPostContent
+	case ok := <-writeContent(f, c):
+		if !ok {
+			f.Close()
+			os.Remove(name)
+			return nil, mailbox.ErrUnableToPostContent
+		}
 	}
-	if stat, err := f.Stat(); err == nil {
-		ct = stat.ModTime()
-	}
+
 	f.Close()
 	return &ct, nil
 }
