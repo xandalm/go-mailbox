@@ -24,6 +24,7 @@ type ioResult[T any] struct {
 }
 
 func getDirectoryNamesFn[T []string](ch chan ioResult[T], f *os.File) {
+	f.Seek(0, 0)
 	names, err := f.Readdirnames(0)
 	ch <- ioResult[T]{names, err}
 }
@@ -35,6 +36,7 @@ func getDirectoryNames(f *os.File) chan ioResult[[]string] {
 }
 
 func getDirectoryEntriesFn[T []fs.DirEntry](ch chan ioResult[T], f *os.File) {
+	f.Seek(0, 0)
 	entries, err := f.ReadDir(0)
 	ch <- ioResult[T]{entries, err}
 }
@@ -243,16 +245,22 @@ func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Tim
 		files = got.data
 	}
 
+	nfiles := len(files)
+
+	if limit <= 0 {
+		limit = nfiles
+	}
+
 	var err mailbox.Error
-	for i := 0; i < len(files); i++ {
+	for i := 0; i < nfiles; i++ {
 		file := files[i]
 		select {
 		case <-ctx.Done():
-			i = len(files)
+			i = nfiles
 		case got := <-getFileInfoFromDirEntry(file):
 			if got.err != nil {
 				err = mailbox.ErrUnableToReadContent
-				i = len(files)
+				i = nfiles
 			} else {
 				ct := (*got.data).ModTime()
 				if !(ct.Before(begin) || ct.After(end)) {
@@ -267,8 +275,8 @@ func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Tim
 		}
 	}
 
-	if limit <= 0 {
-		return ret, err
+	if lim := len(ret); lim < limit {
+		limit = lim
 	}
 
 	return ret[:limit], err
@@ -317,20 +325,20 @@ func (b *box) PostWithContext(ctx context.Context, id string, c Bytes) (*time.Ti
 
 	ct := time.Now()
 
+	var err mailbox.Error
 	select {
 	case <-ctx.Done():
-		f.Close()
-		os.Remove(name)
-		return nil, mailbox.ErrUnableToPostContent
+		err = mailbox.ErrUnableToPostContent
 	case ok := <-writeContent(f, c):
 		if !ok {
-			f.Close()
-			os.Remove(name)
-			return nil, mailbox.ErrUnableToPostContent
+			err = mailbox.ErrUnableToPostContent
 		}
 	}
-
 	f.Close()
+	if err != nil {
+		os.Remove(name)
+		return nil, err
+	}
 	return &ct, nil
 }
 

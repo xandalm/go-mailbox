@@ -128,6 +128,29 @@ func TestBox_ListFromPeriod(t *testing.T) {
 	assert.Equal(t, got[0], "f348c")
 	assert.Equal(t, got[1], "a5c01")
 
+	t.Run("should return one name (limit=1)", func(t *testing.T) {
+		got, err := b.ListFromPeriod(begin, end, 1)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, got)
+		assert.NotEmpty(t, got)
+		if len(got) != 1 {
+			t.Fatalf("didn't get expected length, got %d want 1", len(got))
+		}
+		assert.Equal(t, got[0], "f348c")
+	})
+
+	t.Run("should return all names when limit exceeds total names", func(t *testing.T) {
+		got, err := b.ListFromPeriod(begin, end, 10)
+
+		assert.Nil(t, err)
+		assert.NotNil(t, got)
+		assert.NotEmpty(t, got)
+		if len(got) != 2 {
+			t.Fatalf("didn't get expected length, got %d want 1", len(got))
+		}
+	})
+
 	t.Cleanup(newCleanUpFunc(p))
 }
 
