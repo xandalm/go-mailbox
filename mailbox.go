@@ -65,7 +65,7 @@ type Manager interface {
 	// Remove box and all its contents.
 	EraseBox(string) Error
 	// Check if the box exists
-	ContainsBox(string) (bool, Error)
+	ContainsBox(string) bool
 }
 
 type Provider interface {
@@ -74,7 +74,7 @@ type Provider interface {
 	// Get existing box.
 	Get(string) (Box, Error)
 	// Check for box existence.
-	Contains(string) (bool, Error)
+	Contains(string) bool
 	// Delete existing box and all its contents.
 	Delete(string) Error
 }
@@ -157,16 +157,13 @@ func (m *manager) RequestBox(id string) (Box, Error) {
 }
 
 func (m *manager) EraseBox(id string) Error {
-	has, err := m.p.Contains(id)
-	if err != nil {
-		return err
-	}
+	has := m.p.Contains(id)
 	if !has {
 		return nil
 	}
 	return m.p.Delete(id)
 }
 
-func (m *manager) ContainsBox(id string) (bool, Error) {
+func (m *manager) ContainsBox(id string) bool {
 	return m.p.Contains(id)
 }

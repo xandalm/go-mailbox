@@ -54,15 +54,13 @@ func TestProvider_Contains(t *testing.T) {
 	}
 
 	t.Run("returns true and nil error", func(t *testing.T) {
-		got, err := p.Contains("box_1")
+		got := p.Contains("box_1")
 
-		assert.Nil(t, err)
 		assert.True(t, got)
 	})
 	t.Run("returns false and nil error", func(t *testing.T) {
-		got, err := p.Contains("box_2")
+		got := p.Contains("box_2")
 
-		assert.Nil(t, err)
 		assert.False(t, got)
 	})
 }

@@ -57,13 +57,11 @@ func TestCheckingForBox(t *testing.T) {
 	manager := NewManager(provider)
 
 	t.Run("returns true", func(t *testing.T) {
-		got, err := manager.ContainsBox("box_1")
-		assert.Nil(t, err)
+		got := manager.ContainsBox("box_1")
 		assert.True(t, got)
 	})
 	t.Run("returns false", func(t *testing.T) {
-		got, err := manager.ContainsBox("box_2")
-		assert.Nil(t, err)
+		got := manager.ContainsBox("box_2")
 		assert.False(t, got)
 	})
 }

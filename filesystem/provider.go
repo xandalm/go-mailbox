@@ -155,12 +155,12 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	return nil, ErrBoxNotFound
 }
 
-func (p *provider) Contains(id string) (bool, mailbox.Error) {
+func (p *provider) Contains(id string) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
 	_, has := p.boxPosition(id)
-	return has, nil
+	return has
 }
 
 func (p *provider) Delete(id string) mailbox.Error {
