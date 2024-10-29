@@ -2,6 +2,7 @@ package filesystem
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -38,24 +39,24 @@ func NewProvider(path, dir string) mailbox.Provider {
 	path = join(path, dir)
 	err := os.MkdirAll(path, 0666)
 	if err != nil && !os.IsExist(err) {
-		panic("unable to create provider")
+		panic(fmt.Sprintf("unable to create provider, %v", err))
 	}
 	f, err := os.Open(path)
 	if err != nil {
-		panic("unable to keep directory file open")
+		panic(fmt.Sprintf("unable to keep directory file open, %v", err))
 	}
 	p := &provider{sync.RWMutex{}, f, []*boxFile{}, path}
 	foundBoxes, err := f.Readdirnames(0)
 	if err != nil {
-		panic("unable to load existing boxes")
+		panic(fmt.Sprintf("unable to load existing boxes, %v", err))
 	}
 	for _, id := range foundBoxes {
 		f, err := os.Open(join(path, id))
 		if err != nil {
-			panic("unable to load existing boxes")
+			panic(fmt.Sprintf("unable to load existing boxes, %v", err))
 		}
 		if err = p.insertBox(&boxFile{id: id, f: f}); err != nil {
-			panic("unable to load existing boxes")
+			panic(fmt.Sprintf("unable to load existing boxes, %v", err))
 		}
 	}
 	return p
