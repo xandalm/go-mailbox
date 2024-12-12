@@ -159,7 +159,7 @@ func (m *manager) RequestBox(id string) (Box, Error) {
 func (m *manager) EraseBox(id string) Error {
 	has := m.p.Contains(id)
 	if !has {
-		return nil
+		return ErrUnknownBox
 	}
 	return m.p.Delete(id)
 }
