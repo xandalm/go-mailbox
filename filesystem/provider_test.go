@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/xandalm/go-mailbox"
 	"github.com/xandalm/go-testing/assert"
 )
 
@@ -123,7 +124,7 @@ func TestProvider_Get(t *testing.T) {
 		b, got := p.Get("box_2")
 
 		assert.Nil(t, b)
-		assert.Error(t, got, ErrBoxNotFound)
+		assert.Error(t, got, mailbox.ErrBoxNotFound)
 	})
 
 	t.Cleanup(newCleanUpFunc(p))

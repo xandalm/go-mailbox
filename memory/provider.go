@@ -54,6 +54,8 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	b := p.boxes[id]
-	return b, nil
+	if b, has := p.boxes[id]; has {
+		return b, nil
+	}
+	return nil, mailbox.ErrBoxNotFound
 }

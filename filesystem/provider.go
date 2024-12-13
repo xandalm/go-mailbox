@@ -15,7 +15,6 @@ import (
 var (
 	ErrEmptyBoxIdentifier    = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "identifier can't be empty")
 	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "repeated identifier")
-	ErrBoxNotFound           = mailbox.NewDetailedError(mailbox.ErrUnableToRestoreBox, "not found")
 )
 
 func join(s ...string) string {
@@ -145,14 +144,13 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 }
 
 func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
-
 	if bf := p.getBox(id); bf != nil {
 		return &box{
 			p:  p,
 			bf: bf,
 		}, nil
 	}
-	return nil, ErrBoxNotFound
+	return nil, mailbox.ErrBoxNotFound
 }
 
 func (p *provider) Contains(id string) bool {

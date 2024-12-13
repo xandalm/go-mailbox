@@ -56,7 +56,7 @@ var (
 	ErrUnableToDeleteContent Error = newError("unable to delete content")
 	ErrUnableToCleanBox      Error = newError("unable to clean box")
 
-	ErrUnknownBox Error = newError("there's no such box")
+	ErrBoxNotFound Error = newError("there's no such box")
 )
 
 type Manager interface {
@@ -147,7 +147,7 @@ func NewManager(p Provider) Manager {
 
 func (m *manager) RequestBox(id string) (Box, Error) {
 	box, err := m.p.Get(id)
-	if err != nil {
+	if err != nil && err != ErrBoxNotFound {
 		return nil, err
 	}
 	if box == nil {
@@ -159,7 +159,7 @@ func (m *manager) RequestBox(id string) (Box, Error) {
 func (m *manager) EraseBox(id string) Error {
 	has := m.p.Contains(id)
 	if !has {
-		return ErrUnknownBox
+		return ErrBoxNotFound
 	}
 	return m.p.Delete(id)
 }
