@@ -17,23 +17,23 @@ func TestBox_Post(t *testing.T) {
 
 	t.Run("post content", func(t *testing.T) {
 		content := Bytes("foo")
-		ct, err := b.Post("1", content)
+		data, err := b.Post(content)
 
 		assert.Nil(t, err)
-		assert.NotZero(t, ct)
-		assertContentFileHasData(t, b, "1", content)
+		assert.NotZero(t, data)
+		assertContentFileHasData(t, b, data.Id, content)
 	})
 
-	t.Run("returns error because id duplication", func(t *testing.T) {
-		assertContentFileExists(t, b, "1")
+	// t.Run("returns error because id duplication", func(t *testing.T) {
+	// 	assertContentFileExists(t, b, "1")
 
-		ct, err := b.Post("1", Bytes("bar"))
-		assert.Zero(t, ct)
-		assert.Error(t, err, ErrRepeatedContentIdentifier)
-	})
+	// 	ct, err := b.Post(Bytes("bar"))
+	// 	assert.Zero(t, ct)
+	// 	assert.Error(t, err, ErrRepeatedContentIdentifier)
+	// })
 
 	t.Run("returns error because nil content", func(t *testing.T) {
-		ct, err := b.Post("2", nil)
+		ct, err := b.Post(nil)
 		assert.Zero(t, ct)
 		assert.Error(t, err, ErrPostingNilContent)
 	})

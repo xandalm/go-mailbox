@@ -37,11 +37,11 @@ func (s *stubBox) ListFromPeriodWithContext(context.Context, time.Time, time.Tim
 }
 
 // PostWithContext implements Box.
-func (s *stubBox) PostWithContext(context.Context, string, Bytes) (*time.Time, Error) {
+func (s *stubBox) PostWithContext(context.Context, Bytes) (Data, Error) {
 	panic("unimplemented")
 }
 
-func (s *stubBox) Post(string, Bytes) (*time.Time, Error) {
+func (s *stubBox) Post(Bytes) (Data, Error) {
 	panic("unimplemented")
 }
 

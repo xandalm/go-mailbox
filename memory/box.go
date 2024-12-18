@@ -1,8 +1,11 @@
 package memory
 
 import (
+	"bytes"
 	"container/list"
 	"context"
+	"crypto/sha1"
+	"fmt"
 	"sync"
 	"time"
 
@@ -164,27 +167,34 @@ func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox
 	return b.ListFromPeriodWithContext(context.TODO(), begin, end, limit)
 }
 
-func (b *box) PostWithContext(_ context.Context, id string, c Bytes) (*time.Time, mailbox.Error) {
+func (b *box) PostWithContext(_ context.Context, c Bytes) (mailbox.Data, mailbox.Error) {
 	if c == nil {
-		return nil, ErrPostingNilContent
+		return mailbox.Data{}, ErrPostingNilContent
 	}
 
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	c = bytes.Clone(c)
+	ct := time.Now()
+	id := fmt.Sprintf("%x", sha1.Sum([]byte(ct.Format(time.RFC3339Nano))))
+
 	if _, ok := b.dataById[id]; ok {
-		return nil, ErrRepeatedContentIdentifier
+		return mailbox.Data{}, ErrRepeatedContentIdentifier
 	}
-	now := time.Now()
 	reg := &registry{
 		id,
-		now.UnixNano(),
+		ct.UnixNano(),
 		c,
 	}
 	b.dataById[id] = b.data.PushBack(reg)
-	return &now, nil
+	return mailbox.Data{
+		Id:           id,
+		CreationTime: ct.UnixNano(),
+		Content:      c,
+	}, nil
 }
 
-func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
-	return b.PostWithContext(context.TODO(), id, c)
+func (b *box) Post(c Bytes) (mailbox.Data, mailbox.Error) {
+	return b.PostWithContext(context.TODO(), c)
 }

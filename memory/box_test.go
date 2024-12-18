@@ -12,55 +12,55 @@ import (
 func TestBox_Post(t *testing.T) {
 
 	t.Run("post content", func(t *testing.T) {
-		id := "1"
+		// id := "1"
 		content := Bytes("lorem ipsum")
 		b := &box{
 			data:     list.New(),
 			dataById: make(map[string]*list.Element),
 		}
 
-		ct, err := b.Post(id, content)
+		data, err := b.Post(content)
 
 		assert.Nil(t, err)
-		assert.NotZero(t, ct)
+		assert.NotZero(t, data)
 
 		if b.data.Len() == 0 {
 			t.Fatal("expected not to be empty")
 		}
 		assert.NotEmpty(t, b.dataById)
 
-		onMap, ok1 := b.dataById[id]
+		onMap, ok1 := b.dataById[data.Id]
 		if !ok1 {
-			t.Fatalf("didn't have key %s in %v", id, b.dataById)
+			t.Fatalf("didn't have key %s in %v", data.Id, b.dataById)
 		}
 
 		assert.Equal(t, onMap, b.data.Front())
 
 		reg := onMap.Value.(*registry)
-		wantReg := registry{id, ct.UnixNano(), content}
+		wantReg := registry{data.Id, data.CreationTime, data.Content}
 
 		assert.Equal(t, *reg, wantReg)
 	})
-	t.Run("returns error because id duplication", func(t *testing.T) {
-		b := &box{
-			data:     list.New(),
-			dataById: map[string]*list.Element{},
-		}
+	// t.Run("returns error because id duplication", func(t *testing.T) {
+	// 	b := &box{
+	// 		data:     list.New(),
+	// 		dataById: map[string]*list.Element{},
+	// 	}
 
-		reg := &registry{"1", time.Now().UnixNano(), Bytes("foo")}
-		b.dataById[reg.id] = b.data.PushBack(reg)
+	// 	reg := &registry{"1", time.Now().UnixNano(), Bytes("foo")}
+	// 	b.dataById[reg.id] = b.data.PushBack(reg)
 
-		ct, err := b.Post("1", Bytes("bar"))
-		assert.Zero(t, ct)
-		assert.Error(t, err, ErrRepeatedContentIdentifier)
-	})
+	// 	ct, err := b.Post(Bytes("bar"))
+	// 	assert.Zero(t, ct)
+	// 	assert.Error(t, err, ErrRepeatedContentIdentifier)
+	// })
 	t.Run("returns error because nil content", func(t *testing.T) {
 		b := &box{
 			data:     list.New(),
 			dataById: map[string]*list.Element{},
 		}
 
-		ct, err := b.Post("1", nil)
+		ct, err := b.Post(nil)
 		assert.Zero(t, ct)
 		assert.Error(t, err, ErrPostingNilContent)
 	})

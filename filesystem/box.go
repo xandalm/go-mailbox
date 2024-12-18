@@ -1,7 +1,10 @@
 package filesystem
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha1"
+	"fmt"
 	"io/fs"
 	"os"
 	"slices"
@@ -288,42 +291,44 @@ func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox
 }
 
 // PostWithContext implements mailbox.Box.
-func (b *box) PostWithContext(ctx context.Context, id string, c Bytes) (*time.Time, mailbox.Error) {
+func (b *box) PostWithContext(ctx context.Context, c Bytes) (mailbox.Data, mailbox.Error) {
 	b.bf.mu.Lock()
 	defer b.bf.mu.Unlock()
 
 	if c == nil {
-		return nil, ErrPostingNilContent
+		return mailbox.Data{}, ErrPostingNilContent
 	}
 
 	f := b.bf.f
+
+	c = bytes.Clone(c)
+	ct := time.Now()
+	id := fmt.Sprintf("%x", sha1.Sum([]byte(ct.Format(time.RFC3339Nano))))
 
 	name := join(f.Name(), id)
 
 	select {
 	case <-ctx.Done():
-		return nil, mailbox.ErrUnableToPostContent
+		return mailbox.Data{}, mailbox.ErrUnableToPostContent
 	case got := <-getFileInfo(name):
 		err := got.err
 		if err == nil {
-			return nil, ErrRepeatedContentIdentifier
+			return mailbox.Data{}, ErrRepeatedContentIdentifier
 		} else if !os.IsNotExist(err) {
-			return nil, mailbox.ErrUnableToPostContent
+			return mailbox.Data{}, mailbox.ErrUnableToPostContent
 		}
 	}
 
 	select {
 	case <-ctx.Done():
 		os.Remove(name)
-		return nil, mailbox.ErrUnableToPostContent
+		return mailbox.Data{}, mailbox.ErrUnableToPostContent
 	case got := <-openFile(name):
 		if got.err != nil {
-			return nil, mailbox.ErrUnableToPostContent
+			return mailbox.Data{}, mailbox.ErrUnableToPostContent
 		}
 		f = got.data
 	}
-
-	ct := time.Now()
 
 	var err mailbox.Error
 	select {
@@ -337,12 +342,16 @@ func (b *box) PostWithContext(ctx context.Context, id string, c Bytes) (*time.Ti
 	f.Close()
 	if err != nil {
 		os.Remove(name)
-		return nil, err
+		return mailbox.Data{}, err
 	}
-	return &ct, nil
+	return mailbox.Data{
+		Id:           id,
+		CreationTime: ct.UnixNano(),
+		Content:      c,
+	}, nil
 }
 
 // Post implements mailbox.Box.
-func (b *box) Post(id string, c Bytes) (*time.Time, mailbox.Error) {
-	return b.PostWithContext(context.TODO(), id, c)
+func (b *box) Post(c Bytes) (mailbox.Data, mailbox.Error) {
+	return b.PostWithContext(context.TODO(), c)
 }

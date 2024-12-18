@@ -82,6 +82,7 @@ type Provider interface {
 type Bytes []byte
 
 type Data struct {
+	Id           string
 	CreationTime int64
 	Content      Bytes
 }
@@ -93,9 +94,9 @@ type AttemptData struct {
 
 type Box interface {
 	// Posts content and return the creation timestamp.
-	Post(string, Bytes) (*time.Time, Error)
+	Post(Bytes) (Data, Error)
 	// Posts content and return the creation timestamp using the context.
-	PostWithContext(context.Context, string, Bytes) (*time.Time, Error)
+	PostWithContext(context.Context, Bytes) (Data, Error)
 
 	// Reads the content matching to the identifier.
 	Get(string) (Data, Error)
