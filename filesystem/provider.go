@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -17,14 +18,17 @@ var (
 	ErrRepeatedBoxIdentifier = mailbox.NewDetailedError(mailbox.ErrUnableToCreateBox, "repeated identifier")
 )
 
+const idBiasFilename = ".idb"
+
 func join(s ...string) string {
 	return filepath.Join(s...)
 }
 
 type boxFile struct {
-	mu sync.RWMutex
-	id string
-	f  *os.File
+	mu   sync.RWMutex
+	id   string
+	f    *os.File
+	idbf *os.File // id bias file
 }
 
 type provider struct {
@@ -50,11 +54,19 @@ func NewProvider(path, dir string) mailbox.Provider {
 		panic(fmt.Sprintf("unable to load existing boxes, %v", err))
 	}
 	for _, id := range foundBoxes {
-		f, err := os.Open(join(path, id))
+		box := &boxFile{id: id}
+		box.f, err = os.Open(join(path, id))
 		if err != nil {
 			panic(fmt.Sprintf("unable to load existing boxes, %v", err))
 		}
-		if err = p.insertBox(&boxFile{id: id, f: f}); err != nil {
+		box.idbf, err = os.OpenFile(join(path, idBiasFilename), os.O_RDWR, 0666)
+		if err == nil {
+			box.f.Close()
+			panic(fmt.Sprintf("unable to load existing boxes, %v", err))
+		}
+		if err = p.insertBox(box); err != nil {
+			box.f.Close()
+			box.idbf.Close()
 			panic(fmt.Sprintf("unable to load existing boxes, %v", err))
 		}
 	}
@@ -121,25 +133,44 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
+
 	bf := p.createBox(id)
 	if bf == nil {
 		return nil, ErrRepeatedBoxIdentifier
 	}
+
 	path := join(p.path, id)
+
 	err := os.Mkdir(path, 0666)
 	if err != nil {
 		p.removeBox(bf)
 		return nil, mailbox.ErrUnableToCreateBox
 	}
+
 	f, err := os.Open(path)
 	if err != nil {
 		p.removeBox(bf)
 		return nil, mailbox.ErrUnableToCreateBox
 	}
 	bf.f = f
+
+	var idb uint64
+	f, err = os.OpenFile(join(path, idBiasFilename), os.O_CREATE|os.O_RDWR, 0666)
+	if err == nil {
+		err = binary.Write(f, binary.BigEndian, idb)
+	}
+	if err != nil {
+		bf.f.Close()
+		os.Remove(path)
+		p.removeBox(bf)
+		return nil, mailbox.ErrUnableToCreateBox
+	}
+	bf.idbf = f
+
 	return &box{
-		p:  p,
-		bf: bf,
+		p:   p,
+		bf:  bf,
+		idb: idb,
 	}, nil
 }
 
@@ -171,6 +202,10 @@ func (p *provider) Delete(id string) mailbox.Error {
 	p.removeBox(bf)
 
 	if err := bf.f.Close(); err != nil {
+		p.insertBox(bf)
+		return mailbox.ErrUnableToDeleteBox
+	}
+	if err := bf.idbf.Close(); err != nil {
 		p.insertBox(bf)
 		return mailbox.ErrUnableToDeleteBox
 	}

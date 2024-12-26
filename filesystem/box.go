@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	"encoding/binary"
 	"fmt"
 	"io/fs"
 	"os"
@@ -106,8 +107,9 @@ func writeContent(f *os.File, c []byte) chan bool {
 }
 
 type box struct {
-	p  *provider
-	bf *boxFile
+	p   *provider
+	bf  *boxFile
+	idb uint64 // id bias (circular)
 }
 
 // CleanWithContext implements mailbox.Box.
@@ -130,6 +132,9 @@ func (b *box) CleanWithContext(ctx context.Context) mailbox.Error {
 	}
 	errCount := 0
 	for _, name := range names {
+		if name == idBiasFilename {
+			continue
+		}
 		if err := os.Remove(join(f.Name(), name)); err != nil {
 			errCount++
 		}
@@ -290,6 +295,20 @@ func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox
 	return b.ListFromPeriodWithContext(context.TODO(), begin, end, limit)
 }
 
+func (b *box) newId() string {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, b.idb)
+	b.idb++
+
+	idbf := b.bf.idbf
+	idbf.Seek(0, 0)
+	if err := binary.Write(idbf, binary.BigEndian, b.idb); err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%x", sha1.Sum(buf))
+}
+
 // PostWithContext implements mailbox.Box.
 func (b *box) PostWithContext(ctx context.Context, c Bytes) (mailbox.Data, mailbox.Error) {
 	b.bf.mu.Lock()
@@ -303,7 +322,11 @@ func (b *box) PostWithContext(ctx context.Context, c Bytes) (mailbox.Data, mailb
 
 	c = bytes.Clone(c)
 	ct := time.Now()
-	id := fmt.Sprintf("%x", sha1.Sum([]byte(ct.Format(time.RFC3339Nano))))
+	id := b.newId()
+
+	if id == "" {
+		return mailbox.Data{}, mailbox.ErrUnableToPostContent
+	}
 
 	name := join(f.Name(), id)
 

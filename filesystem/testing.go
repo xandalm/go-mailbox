@@ -23,6 +23,7 @@ func newCleanUpFunc(p *provider) func() {
 			for _, b := range p.boxes {
 				if b.f != nil {
 					b.f.Close()
+					b.idbf.Close()
 				}
 			}
 		}
@@ -64,9 +65,14 @@ func createBox(p *provider, id string) *box {
 	if err != nil {
 		log.Fatalf("unable to open box file, %v", err)
 	}
+	idbf, err := os.OpenFile(filepath.Join(path, idBiasFilename), os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatalf("unable to open box file, %v", err)
+	}
 	bf := &boxFile{
-		id: id,
-		f:  f,
+		id:   id,
+		f:    f,
+		idbf: idbf,
 	}
 	p.boxes = slices.Insert(p.boxes, pos, bf)
 	return &box{
