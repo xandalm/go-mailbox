@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"context"
 	"crypto/sha1"
+	"encoding/binary"
 	"fmt"
 	"sync"
 	"time"
@@ -27,6 +28,7 @@ type registry struct {
 
 type box struct {
 	mu       sync.RWMutex
+	idb      uint64
 	data     *list.List
 	dataById map[string]*list.Element
 }
@@ -167,6 +169,14 @@ func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox
 	return b.ListFromPeriodWithContext(context.TODO(), begin, end, limit)
 }
 
+func (b *box) newId() string {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, b.idb)
+	b.idb++
+
+	return fmt.Sprintf("%x", sha1.Sum(buf))
+}
+
 func (b *box) PostWithContext(_ context.Context, c Bytes) (mailbox.Data, mailbox.Error) {
 	if c == nil {
 		return mailbox.Data{}, ErrPostingNilContent
@@ -176,8 +186,8 @@ func (b *box) PostWithContext(_ context.Context, c Bytes) (mailbox.Data, mailbox
 	defer b.mu.Unlock()
 
 	c = bytes.Clone(c)
+	id := b.newId()
 	ct := time.Now()
-	id := fmt.Sprintf("%x", sha1.Sum([]byte(ct.Format(time.RFC3339Nano))))
 
 	if _, ok := b.dataById[id]; ok {
 		return mailbox.Data{}, ErrRepeatedContentIdentifier
