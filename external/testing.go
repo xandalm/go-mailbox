@@ -100,26 +100,3 @@ func (s *spyProviderBridge) OnGet(context.Context, string) (mailbox.Box, mailbox
 	s.OnGetCalls++
 	return nil, nil
 }
-
-type stubProviderBridge struct {
-}
-
-// OnDelete implements ProviderBridge.
-func (s *stubProviderBridge) OnDelete(context.Context, string) mailbox.Error {
-	panic("unimplemented")
-}
-
-// OnContains implements ProviderBridge.
-func (s *stubProviderBridge) OnContains(context.Context, string) bool {
-	panic("unimplemented")
-}
-
-// OnCreate implements ProviderBridge.
-func (s *stubProviderBridge) OnCreate(context.Context, string) (mailbox.Box, mailbox.Error) {
-	return &stubBox{}, nil
-}
-
-// OnGet implements ProviderBridge.
-func (s *stubProviderBridge) OnGet(context.Context, string) (mailbox.Box, mailbox.Error) {
-	panic("unimplemented")
-}
