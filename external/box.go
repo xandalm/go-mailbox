@@ -12,6 +12,7 @@ type BoxBridge interface {
 	OnGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error)
 	OnLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData
 	OnListFromPeriod(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error)
+	OnDelete(ctx context.Context, id string) mailbox.Error
 }
 
 type box struct {
@@ -29,13 +30,13 @@ func (b *box) CleanWithContext(context.Context) mailbox.Error {
 }
 
 // Delete implements mailbox.Box.
-func (b *box) Delete(string) mailbox.Error {
-	panic("unimplemented")
+func (b *box) Delete(id string) mailbox.Error {
+	return b.b.OnDelete(context.TODO(), id)
 }
 
 // DeleteWithContext implements mailbox.Box.
-func (b *box) DeleteWithContext(context.Context, string) mailbox.Error {
-	panic("unimplemented")
+func (b *box) DeleteWithContext(ctx context.Context, id string) mailbox.Error {
+	return b.b.OnDelete(ctx, id)
 }
 
 // Get implements mailbox.Box.

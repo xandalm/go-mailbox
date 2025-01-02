@@ -80,3 +80,19 @@ func TestBox_ListFromPeriodHasForwardedToOnListFromPeriod(t *testing.T) {
 		assert.Equal(t, bb.OnListFromPeriodCalls, 2)
 	})
 }
+
+func TestBox_DeleteHasForwardedToOnDelete(t *testing.T) {
+	bb := &spyBoxBridge{}
+	b := NewBox(bb)
+
+	t.Run("providing context", func(t *testing.T) {
+		b.DeleteWithContext(context.TODO(), "post")
+
+		assert.Equal(t, bb.OnDeleteCalls, 1)
+	})
+	t.Run("not providing context", func(t *testing.T) {
+		b.Delete("post")
+
+		assert.Equal(t, bb.OnDeleteCalls, 2)
+	})
+}

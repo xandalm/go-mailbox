@@ -12,6 +12,7 @@ type spyBoxBridge struct {
 	OnGetCalls            int
 	OnLazyGetCalls        int
 	OnListFromPeriodCalls int
+	OnDeleteCalls         int
 }
 
 // OnPost implements BoxBridge.
@@ -26,14 +27,22 @@ func (s *spyBoxBridge) OnGet(ctx context.Context, id string) (mailbox.Data, mail
 	return mailbox.Data{}, nil
 }
 
+// OnDelete implements BoxBridge.
 func (s *spyBoxBridge) OnLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData {
 	s.OnLazyGetCalls++
 	return nil
 }
 
+// OnDelete implements BoxBridge.
 func (s *spyBoxBridge) OnListFromPeriod(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
 	s.OnListFromPeriodCalls++
 	return nil, nil
+}
+
+// OnDelete implements BoxBridge.
+func (s *spyBoxBridge) OnDelete(ctx context.Context, id string) mailbox.Error {
+	s.OnDeleteCalls++
+	return nil
 }
 
 type spyProviderBridge struct {
