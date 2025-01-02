@@ -71,7 +71,10 @@ func (s *stubBox) PostWithContext(context.Context, mailbox.Bytes) (mailbox.Data,
 }
 
 type spyProviderBridge struct {
-	OnCreateCalls int
+	OnCreateCalls   int
+	OnContainsCalls int
+	OnGetCalls      int
+	OnDeleteCalls   int
 }
 
 // OnDelete implements ProviderBridge.
@@ -82,17 +85,20 @@ func (s *spyProviderBridge) OnCreate(context.Context, string) (mailbox.Box, mail
 
 // OnDelete implements ProviderBridge.
 func (s *spyProviderBridge) OnDelete(context.Context, string) mailbox.Error {
-	panic("unimplemented")
+	s.OnDeleteCalls++
+	return nil
 }
 
 // OnContains implements ProviderBridge.
 func (s *spyProviderBridge) OnContains(context.Context, string) bool {
-	panic("unimplemented")
+	s.OnContainsCalls++
+	return false
 }
 
 // OnGet implements ProviderBridge.
 func (s *spyProviderBridge) OnGet(context.Context, string) (mailbox.Box, mailbox.Error) {
-	panic("unimplemented")
+	s.OnGetCalls++
+	return nil, nil
 }
 
 type stubProviderBridge struct {

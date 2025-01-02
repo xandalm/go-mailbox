@@ -22,8 +22,8 @@ func NewProvider(p ProviderBridge) mailbox.Provider {
 }
 
 // Contains implements mailbox.Provider.
-func (p *provider) Contains(string) bool {
-	panic("unimplemented")
+func (p *provider) Contains(id string) bool {
+	return p.p.OnContains(context.TODO(), id)
 }
 
 // Create implements mailbox.Provider.
@@ -32,11 +32,11 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 }
 
 // Delete implements mailbox.Provider.
-func (p *provider) Delete(string) mailbox.Error {
-	panic("unimplemented")
+func (p *provider) Delete(id string) mailbox.Error {
+	return p.p.OnDelete(context.TODO(), id)
 }
 
 // Get implements mailbox.Provider.
-func (p *provider) Get(string) (mailbox.Box, mailbox.Error) {
-	panic("unimplemented")
+func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
+	return p.p.OnGet(context.TODO(), id)
 }

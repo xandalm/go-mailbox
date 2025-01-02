@@ -33,3 +33,36 @@ func TestProvider_Create(t *testing.T) {
 		assert.NotNil(t, got)
 	})
 }
+
+func TestProvider_Contains(t *testing.T) {
+	t.Run("should forward to external handler", func(t *testing.T) {
+		pb := &spyProviderBridge{}
+		p := NewProvider(pb)
+
+		p.Contains("box")
+
+		assert.Equal(t, pb.OnContainsCalls, 1)
+	})
+}
+
+func TestProvider_Get(t *testing.T) {
+	t.Run("should forward to external handler", func(t *testing.T) {
+		pb := &spyProviderBridge{}
+		p := NewProvider(pb)
+
+		p.Get("box")
+
+		assert.Equal(t, pb.OnGetCalls, 1)
+	})
+}
+
+func TestProvider_Delete(t *testing.T) {
+	t.Run("should forward to external handler", func(t *testing.T) {
+		pb := &spyProviderBridge{}
+		p := NewProvider(pb)
+
+		p.Delete("box")
+
+		assert.Equal(t, pb.OnDeleteCalls, 1)
+	})
+}
