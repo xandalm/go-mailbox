@@ -13,6 +13,13 @@ type spyBoxBridge struct {
 	OnLazyGetCalls        int
 	OnListFromPeriodCalls int
 	OnDeleteCalls         int
+	OnCleanCalls          int
+}
+
+// OnClean implements BoxBridge.
+func (s *spyBoxBridge) OnClean(ctx context.Context) mailbox.Error {
+	s.OnCleanCalls++
+	return nil
 }
 
 // OnPost implements BoxBridge.

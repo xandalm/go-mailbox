@@ -96,3 +96,19 @@ func TestBox_DeleteHasForwardedToOnDelete(t *testing.T) {
 		assert.Equal(t, bb.OnDeleteCalls, 2)
 	})
 }
+
+func TestBox_CleanHasForwardedToOnClean(t *testing.T) {
+	bb := &spyBoxBridge{}
+	b := NewBox(bb)
+
+	t.Run("providing context", func(t *testing.T) {
+		b.CleanWithContext(context.TODO())
+
+		assert.Equal(t, bb.OnCleanCalls, 1)
+	})
+	t.Run("not providing context", func(t *testing.T) {
+		b.Clean()
+
+		assert.Equal(t, bb.OnCleanCalls, 2)
+	})
+}
