@@ -7,8 +7,9 @@ import (
 )
 
 type spyBoxBridge struct {
-	OnPostCalls int
-	OnGetCalls  int
+	OnPostCalls    int
+	OnGetCalls     int
+	OnLazyGetCalls int
 }
 
 // OnPost implements BoxBridge.
@@ -21,6 +22,11 @@ func (s *spyBoxBridge) OnPost(ctx context.Context, c mailbox.Bytes) (mailbox.Dat
 func (s *spyBoxBridge) OnGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
 	s.OnGetCalls++
 	return mailbox.Data{}, nil
+}
+
+func (s *spyBoxBridge) OnLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData {
+	s.OnLazyGetCalls++
+	return nil
 }
 
 type spyProviderBridge struct {

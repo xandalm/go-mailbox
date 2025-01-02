@@ -47,3 +47,19 @@ func TestBox_GetHasForwardedToOnGet(t *testing.T) {
 		assert.Equal(t, bb.OnGetCalls, 2)
 	})
 }
+
+func TestBox_LazyGetHasForwardedToOnLazyGet(t *testing.T) {
+	bb := &spyBoxBridge{}
+	b := NewBox(bb)
+
+	t.Run("providing context", func(t *testing.T) {
+		b.LazyGetWithContext(context.TODO(), "post")
+
+		assert.Equal(t, bb.OnLazyGetCalls, 1)
+	})
+	t.Run("not providing context", func(t *testing.T) {
+		b.LazyGet("post")
+
+		assert.Equal(t, bb.OnLazyGetCalls, 2)
+	})
+}
