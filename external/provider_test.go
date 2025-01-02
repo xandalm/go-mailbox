@@ -16,10 +16,20 @@ func TestNewProvider(t *testing.T) {
 
 func TestProvider_Create(t *testing.T) {
 
-	p := NewProvider(&stubProviderBridge{})
+	t.Run("should forward to external handler", func(t *testing.T) {
+		pb := &spyProviderBridge{}
+		p := NewProvider(pb)
 
-	got, err := p.Create("box_1")
+		p.Create("box")
 
-	assert.Nil(t, err)
-	assert.NotNil(t, got)
+		assert.Equal(t, pb.OnCreateCalls, 1)
+	})
+	t.Run("returns created box", func(t *testing.T) {
+		p := NewProvider(&stubProviderBridge{})
+
+		got, err := p.Create("box_1")
+
+		assert.Nil(t, err)
+		assert.NotNil(t, got)
+	})
 }
