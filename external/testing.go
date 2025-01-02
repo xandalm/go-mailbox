@@ -8,11 +8,18 @@ import (
 
 type spyBoxBridge struct {
 	OnPostCalls int
+	OnGetCalls  int
 }
 
 // OnPost implements BoxBridge.
 func (s *spyBoxBridge) OnPost(ctx context.Context, c mailbox.Bytes) (mailbox.Data, mailbox.Error) {
 	s.OnPostCalls++
+	return mailbox.Data{}, nil
+}
+
+// OnGet implements BoxBridge.
+func (s *spyBoxBridge) OnGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
+	s.OnGetCalls++
 	return mailbox.Data{}, nil
 }
 

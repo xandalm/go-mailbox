@@ -9,6 +9,7 @@ import (
 
 type BoxBridge interface {
 	OnPost(ctx context.Context, c mailbox.Bytes) (mailbox.Data, mailbox.Error)
+	OnGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error)
 }
 
 type box struct {
@@ -36,13 +37,13 @@ func (b *box) DeleteWithContext(context.Context, string) mailbox.Error {
 }
 
 // Get implements mailbox.Box.
-func (b *box) Get(string) (mailbox.Data, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) Get(id string) (mailbox.Data, mailbox.Error) {
+	return b.b.OnGet(context.TODO(), id)
 }
 
 // GetWithContext implements mailbox.Box.
-func (b *box) GetWithContext(context.Context, string) (mailbox.Data, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) GetWithContext(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
+	return b.b.OnGet(ctx, id)
 }
 
 // LazyGet implements mailbox.Box.
