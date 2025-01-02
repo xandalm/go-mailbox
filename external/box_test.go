@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/xandalm/go-testing/assert"
 )
@@ -61,5 +62,21 @@ func TestBox_LazyGetHasForwardedToOnLazyGet(t *testing.T) {
 		b.LazyGet("post")
 
 		assert.Equal(t, bb.OnLazyGetCalls, 2)
+	})
+}
+
+func TestBox_ListFromPeriodHasForwardedToOnListFromPeriod(t *testing.T) {
+	bb := &spyBoxBridge{}
+	b := NewBox(bb)
+
+	t.Run("providing context", func(t *testing.T) {
+		b.ListFromPeriodWithContext(context.TODO(), time.Now(), time.Now(), 1)
+
+		assert.Equal(t, bb.OnListFromPeriodCalls, 1)
+	})
+	t.Run("not providing context", func(t *testing.T) {
+		b.ListFromPeriod(time.Now(), time.Now(), 1)
+
+		assert.Equal(t, bb.OnListFromPeriodCalls, 2)
 	})
 }

@@ -11,6 +11,7 @@ type BoxBridge interface {
 	OnPost(ctx context.Context, c mailbox.Bytes) (mailbox.Data, mailbox.Error)
 	OnGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error)
 	OnLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData
+	OnListFromPeriod(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error)
 }
 
 type box struct {
@@ -58,13 +59,13 @@ func (b *box) LazyGetWithContext(ctx context.Context, ids ...string) chan mailbo
 }
 
 // ListFromPeriod implements mailbox.Box.
-func (b *box) ListFromPeriod(time.Time, time.Time, int) ([]string, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) ListFromPeriod(begin, end time.Time, limit int) ([]string, mailbox.Error) {
+	return b.b.OnListFromPeriod(context.TODO(), begin, end, limit)
 }
 
 // ListFromPeriodWithContext implements mailbox.Box.
-func (b *box) ListFromPeriodWithContext(context.Context, time.Time, time.Time, int) ([]string, mailbox.Error) {
-	panic("unimplemented")
+func (b *box) ListFromPeriodWithContext(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
+	return b.b.OnListFromPeriod(ctx, begin, end, limit)
 }
 
 // Post implements mailbox.Box.

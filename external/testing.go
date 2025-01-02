@@ -2,14 +2,16 @@ package external
 
 import (
 	"context"
+	"time"
 
 	mailbox "github.com/xandalm/go-mailbox"
 )
 
 type spyBoxBridge struct {
-	OnPostCalls    int
-	OnGetCalls     int
-	OnLazyGetCalls int
+	OnPostCalls           int
+	OnGetCalls            int
+	OnLazyGetCalls        int
+	OnListFromPeriodCalls int
 }
 
 // OnPost implements BoxBridge.
@@ -27,6 +29,11 @@ func (s *spyBoxBridge) OnGet(ctx context.Context, id string) (mailbox.Data, mail
 func (s *spyBoxBridge) OnLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData {
 	s.OnLazyGetCalls++
 	return nil
+}
+
+func (s *spyBoxBridge) OnListFromPeriod(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
+	s.OnListFromPeriodCalls++
+	return nil, nil
 }
 
 type spyProviderBridge struct {
