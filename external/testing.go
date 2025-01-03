@@ -8,77 +8,77 @@ import (
 )
 
 type spyBoxBridge struct {
-	OnPostCalls           int
-	OnGetCalls            int
-	OnLazyGetCalls        int
-	OnListFromPeriodCalls int
-	OnDeleteCalls         int
-	OnCleanCalls          int
+	HandlePostCalls           int
+	HandleGetCalls            int
+	HandleLazyGetCalls        int
+	HandleListFromPeriodCalls int
+	HandleDeleteCalls         int
+	HandleCleanCalls          int
 }
 
-// OnClean implements BoxBridge.
-func (s *spyBoxBridge) OnClean(ctx context.Context) mailbox.Error {
-	s.OnCleanCalls++
+// HandleClean implements BoxBridge.
+func (s *spyBoxBridge) HandleClean(ctx context.Context) mailbox.Error {
+	s.HandleCleanCalls++
 	return nil
 }
 
-// OnPost implements BoxBridge.
-func (s *spyBoxBridge) OnPost(ctx context.Context, c mailbox.Bytes) (mailbox.Data, mailbox.Error) {
-	s.OnPostCalls++
+// HandlePost implements BoxBridge.
+func (s *spyBoxBridge) HandlePost(ctx context.Context, c mailbox.Bytes) (mailbox.Data, mailbox.Error) {
+	s.HandlePostCalls++
 	return mailbox.Data{}, nil
 }
 
-// OnGet implements BoxBridge.
-func (s *spyBoxBridge) OnGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
-	s.OnGetCalls++
+// HandleGet implements BoxBridge.
+func (s *spyBoxBridge) HandleGet(ctx context.Context, id string) (mailbox.Data, mailbox.Error) {
+	s.HandleGetCalls++
 	return mailbox.Data{}, nil
 }
 
-// OnDelete implements BoxBridge.
-func (s *spyBoxBridge) OnLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData {
-	s.OnLazyGetCalls++
+// HandleDelete implements BoxBridge.
+func (s *spyBoxBridge) HandleLazyGet(ctx context.Context, ids ...string) chan mailbox.AttemptData {
+	s.HandleLazyGetCalls++
 	return nil
 }
 
-// OnDelete implements BoxBridge.
-func (s *spyBoxBridge) OnListFromPeriod(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
-	s.OnListFromPeriodCalls++
+// HandleDelete implements BoxBridge.
+func (s *spyBoxBridge) HandleListFromPeriod(ctx context.Context, begin, end time.Time, limit int) ([]string, mailbox.Error) {
+	s.HandleListFromPeriodCalls++
 	return nil, nil
 }
 
-// OnDelete implements BoxBridge.
-func (s *spyBoxBridge) OnDelete(ctx context.Context, id string) mailbox.Error {
-	s.OnDeleteCalls++
+// HandleDelete implements BoxBridge.
+func (s *spyBoxBridge) HandleDelete(ctx context.Context, id string) mailbox.Error {
+	s.HandleDeleteCalls++
 	return nil
 }
 
 type spyProviderBridge struct {
-	OnCreateCalls   int
-	OnContainsCalls int
-	OnGetCalls      int
-	OnDeleteCalls   int
+	HandleCreateCalls   int
+	HandleContainsCalls int
+	HandleGetCalls      int
+	HandleDeleteCalls   int
 }
 
-// OnDelete implements ProviderBridge.
-func (s *spyProviderBridge) OnCreate(context.Context, string) (mailbox.Box, mailbox.Error) {
-	s.OnCreateCalls++
+// HandleDelete implements ProviderBridge.
+func (s *spyProviderBridge) HandleCreate(context.Context, string) (mailbox.Box, mailbox.Error) {
+	s.HandleCreateCalls++
 	return nil, nil
 }
 
-// OnDelete implements ProviderBridge.
-func (s *spyProviderBridge) OnDelete(context.Context, string) mailbox.Error {
-	s.OnDeleteCalls++
+// HandleDelete implements ProviderBridge.
+func (s *spyProviderBridge) HandleDelete(context.Context, string) mailbox.Error {
+	s.HandleDeleteCalls++
 	return nil
 }
 
-// OnContains implements ProviderBridge.
-func (s *spyProviderBridge) OnContains(context.Context, string) bool {
-	s.OnContainsCalls++
+// HandleContains implements ProviderBridge.
+func (s *spyProviderBridge) HandleContains(context.Context, string) bool {
+	s.HandleContainsCalls++
 	return false
 }
 
-// OnGet implements ProviderBridge.
-func (s *spyProviderBridge) OnGet(context.Context, string) (mailbox.Box, mailbox.Error) {
-	s.OnGetCalls++
+// HandleGet implements ProviderBridge.
+func (s *spyProviderBridge) HandleGet(context.Context, string) (mailbox.Box, mailbox.Error) {
+	s.HandleGetCalls++
 	return nil, nil
 }

@@ -17,98 +17,98 @@ func TestNewBox(t *testing.T) {
 
 var dummyContent = []byte("abc")
 
-func TestBox_PostHasForwardedToOnPost(t *testing.T) {
+func TestBox_PostHasForwardedToHandlePost(t *testing.T) {
 	bb := &spyBoxBridge{}
 	b := NewBox(bb)
 
 	t.Run("providing context", func(t *testing.T) {
 		b.PostWithContext(context.TODO(), dummyContent)
 
-		assert.Equal(t, bb.OnPostCalls, 1)
+		assert.Equal(t, bb.HandlePostCalls, 1)
 	})
 	t.Run("not providing context", func(t *testing.T) {
 		b.Post(dummyContent)
 
-		assert.Equal(t, bb.OnPostCalls, 2)
+		assert.Equal(t, bb.HandlePostCalls, 2)
 	})
 }
 
-func TestBox_GetHasForwardedToOnGet(t *testing.T) {
+func TestBox_GetHasForwardedToHandleGet(t *testing.T) {
 	bb := &spyBoxBridge{}
 	b := NewBox(bb)
 
 	t.Run("providing context", func(t *testing.T) {
 		b.GetWithContext(context.TODO(), "post")
 
-		assert.Equal(t, bb.OnGetCalls, 1)
+		assert.Equal(t, bb.HandleGetCalls, 1)
 	})
 	t.Run("not providing context", func(t *testing.T) {
 		b.Get("post")
 
-		assert.Equal(t, bb.OnGetCalls, 2)
+		assert.Equal(t, bb.HandleGetCalls, 2)
 	})
 }
 
-func TestBox_LazyGetHasForwardedToOnLazyGet(t *testing.T) {
+func TestBox_LazyGetHasForwardedToHandleLazyGet(t *testing.T) {
 	bb := &spyBoxBridge{}
 	b := NewBox(bb)
 
 	t.Run("providing context", func(t *testing.T) {
 		b.LazyGetWithContext(context.TODO(), "post")
 
-		assert.Equal(t, bb.OnLazyGetCalls, 1)
+		assert.Equal(t, bb.HandleLazyGetCalls, 1)
 	})
 	t.Run("not providing context", func(t *testing.T) {
 		b.LazyGet("post")
 
-		assert.Equal(t, bb.OnLazyGetCalls, 2)
+		assert.Equal(t, bb.HandleLazyGetCalls, 2)
 	})
 }
 
-func TestBox_ListFromPeriodHasForwardedToOnListFromPeriod(t *testing.T) {
+func TestBox_ListFromPeriodHasForwardedToHandleListFromPeriod(t *testing.T) {
 	bb := &spyBoxBridge{}
 	b := NewBox(bb)
 
 	t.Run("providing context", func(t *testing.T) {
 		b.ListFromPeriodWithContext(context.TODO(), time.Now(), time.Now(), 1)
 
-		assert.Equal(t, bb.OnListFromPeriodCalls, 1)
+		assert.Equal(t, bb.HandleListFromPeriodCalls, 1)
 	})
 	t.Run("not providing context", func(t *testing.T) {
 		b.ListFromPeriod(time.Now(), time.Now(), 1)
 
-		assert.Equal(t, bb.OnListFromPeriodCalls, 2)
+		assert.Equal(t, bb.HandleListFromPeriodCalls, 2)
 	})
 }
 
-func TestBox_DeleteHasForwardedToOnDelete(t *testing.T) {
+func TestBox_DeleteHasForwardedToHandleDelete(t *testing.T) {
 	bb := &spyBoxBridge{}
 	b := NewBox(bb)
 
 	t.Run("providing context", func(t *testing.T) {
 		b.DeleteWithContext(context.TODO(), "post")
 
-		assert.Equal(t, bb.OnDeleteCalls, 1)
+		assert.Equal(t, bb.HandleDeleteCalls, 1)
 	})
 	t.Run("not providing context", func(t *testing.T) {
 		b.Delete("post")
 
-		assert.Equal(t, bb.OnDeleteCalls, 2)
+		assert.Equal(t, bb.HandleDeleteCalls, 2)
 	})
 }
 
-func TestBox_CleanHasForwardedToOnClean(t *testing.T) {
+func TestBox_CleanHasForwardedToHandleClean(t *testing.T) {
 	bb := &spyBoxBridge{}
 	b := NewBox(bb)
 
 	t.Run("providing context", func(t *testing.T) {
 		b.CleanWithContext(context.TODO())
 
-		assert.Equal(t, bb.OnCleanCalls, 1)
+		assert.Equal(t, bb.HandleCleanCalls, 1)
 	})
 	t.Run("not providing context", func(t *testing.T) {
 		b.Clean()
 
-		assert.Equal(t, bb.OnCleanCalls, 2)
+		assert.Equal(t, bb.HandleCleanCalls, 2)
 	})
 }
