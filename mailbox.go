@@ -6,7 +6,6 @@ import (
 )
 
 type Error interface {
-	sign() string
 	Error() string
 }
 
@@ -18,12 +17,8 @@ func newError(msg string) *mailboxError {
 	return &mailboxError{msg}
 }
 
-func (e *mailboxError) sign() string {
-	return "mailbox"
-}
-
 func (e *mailboxError) Error() string {
-	return e.sign() + ": " + e.msg
+	return "mailbox: " + e.msg
 }
 
 type mailboxDetailedError struct {
@@ -39,12 +34,8 @@ func NewDetailedError(err Error, info string) Error {
 	panic("invalid type of error")
 }
 
-func (e *mailboxDetailedError) sign() string {
-	return e.e.Error()
-}
-
 func (e *mailboxDetailedError) Error() string {
-	return e.sign() + ", " + e.info
+	return e.e.Error() + ", " + e.info
 }
 
 var (
