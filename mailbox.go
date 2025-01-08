@@ -53,21 +53,32 @@ var (
 type Manager interface {
 	// Create or restore a box.
 	RequestBox(string) (Box, Error)
+	// Create or restore a box using the context.
+	RequestBoxWithContext(context.Context, string) (Box, Error)
+
 	// Remove box and all its contents.
 	EraseBox(string) Error
-	// Check if the box exists
+	// Remove box and all its contents using the context.
+	EraseBoxWithContext(context.Context, string) Error
+
+	// Check if the box exists.
 	ContainsBox(string) bool
+	// Check if the box exists using the context.
+	ContainsBoxWithContext(context.Context, string) bool
 }
 
 type Provider interface {
 	// Create a new box.
-	Create(string) (Box, Error)
+	Create(context.Context, string) (Box, Error)
+
 	// Get existing box.
-	Get(string) (Box, Error)
+	Get(context.Context, string) (Box, Error)
+
 	// Check for box existence.
-	Contains(string) bool
+	Contains(context.Context, string) bool
+
 	// Delete existing box and all its contents.
-	Delete(string) Error
+	Delete(context.Context, string) Error
 }
 
 type Bytes []byte
@@ -137,25 +148,37 @@ func NewManager(p Provider) Manager {
 	return &manager{p: p}
 }
 
-func (m *manager) RequestBox(id string) (Box, Error) {
-	box, err := m.p.Get(id)
+func (m *manager) RequestBoxWithContext(ctx context.Context, id string) (Box, Error) {
+	box, err := m.p.Get(ctx, id)
 	if err != nil && err != ErrBoxNotFound {
 		return nil, err
 	}
 	if box == nil {
-		box, err = m.p.Create(id)
+		box, err = m.p.Create(ctx, id)
 	}
 	return box, err
 }
 
-func (m *manager) EraseBox(id string) Error {
-	has := m.p.Contains(id)
+func (m *manager) RequestBox(id string) (Box, Error) {
+	return m.RequestBoxWithContext(context.TODO(), id)
+}
+
+func (m *manager) EraseBoxWithContext(ctx context.Context, id string) Error {
+	has := m.p.Contains(ctx, id)
 	if !has {
 		return ErrBoxNotFound
 	}
-	return m.p.Delete(id)
+	return m.p.Delete(ctx, id)
+}
+
+func (m *manager) EraseBox(id string) Error {
+	return m.EraseBoxWithContext(context.TODO(), id)
+}
+
+func (m *manager) ContainsBoxWithContext(ctx context.Context, id string) bool {
+	return m.p.Contains(ctx, id)
 }
 
 func (m *manager) ContainsBox(id string) bool {
-	return m.p.Contains(id)
+	return m.ContainsBoxWithContext(context.TODO(), id)
 }

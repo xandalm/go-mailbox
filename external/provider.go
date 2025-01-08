@@ -22,21 +22,21 @@ func NewProvider(p ProviderBridge) mailbox.Provider {
 }
 
 // Contains implements mailbox.Provider.
-func (p *provider) Contains(id string) bool {
-	return p.p.HandleContains(context.TODO(), id)
+func (p *provider) Contains(ctx context.Context, id string) bool {
+	return p.p.HandleContains(ctx, id)
 }
 
 // Create implements mailbox.Provider.
-func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
-	return p.p.HandleCreate(context.TODO(), id)
+func (p *provider) Create(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
+	return p.p.HandleCreate(ctx, id)
 }
 
 // Delete implements mailbox.Provider.
-func (p *provider) Delete(id string) mailbox.Error {
-	return p.p.HandleDelete(context.TODO(), id)
+func (p *provider) Delete(ctx context.Context, id string) mailbox.Error {
+	return p.p.HandleDelete(ctx, id)
 }
 
 // Get implements mailbox.Provider.
-func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
-	return p.p.HandleGet(context.TODO(), id)
+func (p *provider) Get(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
+	return p.p.HandleGet(ctx, id)
 }

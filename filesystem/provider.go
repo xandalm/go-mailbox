@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -128,7 +129,7 @@ func (p *provider) getBox(id string) *boxFile {
 	return p.boxes[pos]
 }
 
-func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
+func (p *provider) Create(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
 
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
@@ -174,7 +175,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	}, nil
 }
 
-func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
+func (p *provider) Get(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
 	if bf := p.getBox(id); bf != nil {
 		return &box{
 			p:  p,
@@ -184,7 +185,7 @@ func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
 	return nil, mailbox.ErrBoxNotFound
 }
 
-func (p *provider) Contains(id string) bool {
+func (p *provider) Contains(ctx context.Context, id string) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
@@ -192,7 +193,7 @@ func (p *provider) Contains(id string) bool {
 	return has
 }
 
-func (p *provider) Delete(id string) mailbox.Error {
+func (p *provider) Delete(ctx context.Context, id string) mailbox.Error {
 
 	bf := p.getBox(id)
 

@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"testing"
 
 	"github.com/xandalm/go-mailbox"
@@ -12,20 +13,20 @@ func TestProvider_Create(t *testing.T) {
 		boxes: map[string]*box{},
 	}
 
-	got, err := p.Create("box_1")
+	got, err := p.Create(context.TODO(), "box_1")
 
 	assert.Nil(t, err)
 	assert.NotNil(t, got)
 	assert.NotEmpty(t, p.(*provider).boxes)
 
 	t.Run("returns error for empty", func(t *testing.T) {
-		b, got := p.Create("")
+		b, got := p.Create(context.TODO(), "")
 
 		assert.Nil(t, b)
 		assert.Error(t, got, ErrEmptyBoxIdentifier)
 	})
 	t.Run("returns error for the id duplicity", func(t *testing.T) {
-		b, got := p.Create("box_1")
+		b, got := p.Create(context.TODO(), "box_1")
 
 		assert.Nil(t, b)
 		assert.Error(t, got, ErrRepeatedBoxIdentifier)
@@ -39,7 +40,7 @@ func TestProvider_Get(t *testing.T) {
 		},
 	}
 
-	got, err := p.Get("box_1")
+	got, err := p.Get(context.TODO(), "box_1")
 	want := p.boxes["box_1"]
 
 	assert.Nil(t, err)
@@ -54,12 +55,12 @@ func TestProvider_Contains(t *testing.T) {
 	}
 
 	t.Run("returns true and nil error", func(t *testing.T) {
-		got := p.Contains("box_1")
+		got := p.Contains(context.TODO(), "box_1")
 
 		assert.True(t, got)
 	})
 	t.Run("returns false and nil error", func(t *testing.T) {
-		got := p.Contains("box_2")
+		got := p.Contains(context.TODO(), "box_2")
 
 		assert.False(t, got)
 	})
@@ -72,7 +73,7 @@ func TestProvider_Delete(t *testing.T) {
 		},
 	}
 
-	err := p.Delete("box_1")
+	err := p.Delete(context.TODO(), "box_1")
 
 	assert.Nil(t, err)
 	assert.Empty(t, p.boxes)

@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"sync"
 
 	"github.com/xandalm/go-mailbox"
@@ -22,19 +23,19 @@ func NewProvider() mailbox.Provider {
 	}
 }
 
-func (p *provider) Contains(id string) bool {
+func (p *provider) Contains(ctx context.Context, id string) bool {
 	_, ok := p.boxes[id]
 	return ok
 }
 
-func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
+func (p *provider) Create(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
 	if id == "" {
 		return nil, ErrEmptyBoxIdentifier
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.Contains(id) {
+	if p.Contains(ctx, id) {
 		return nil, ErrRepeatedBoxIdentifier
 	}
 	b := newBox()
@@ -42,7 +43,7 @@ func (p *provider) Create(id string) (mailbox.Box, mailbox.Error) {
 	return b, nil
 }
 
-func (p *provider) Delete(id string) mailbox.Error {
+func (p *provider) Delete(ctx context.Context, id string) mailbox.Error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -50,7 +51,7 @@ func (p *provider) Delete(id string) mailbox.Error {
 	return nil
 }
 
-func (p *provider) Get(id string) (mailbox.Box, mailbox.Error) {
+func (p *provider) Get(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 

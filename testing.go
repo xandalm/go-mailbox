@@ -69,31 +69,31 @@ type stubProvider struct {
 	Boxes []*stubBox
 }
 
-func (s *stubProvider) Create(id string) (Box, Error) {
+func (s *stubProvider) Create(ctx context.Context, id string) (Box, Error) {
 	b := &stubBox{id}
 	s.Boxes = append(s.Boxes, b)
 	return b, nil
 }
 
-func (s *stubProvider) Get(id string) (Box, Error) {
+func (s *stubProvider) Get(ctx context.Context, id string) (Box, Error) {
 	return &stubBox{id}, nil
 }
 
-func (s *stubProvider) Contains(id string) bool {
+func (s *stubProvider) Contains(ctx context.Context, id string) bool {
 	has := slices.ContainsFunc(s.Boxes, func(b *stubBox) bool {
 		return b.Id == id
 	})
 	return has
 }
 
-func (s *stubProvider) Delete(id string) Error {
+func (s *stubProvider) Delete(ctx context.Context, id string) Error {
 	s.Boxes = slices.DeleteFunc(s.Boxes, func(sb *stubBox) bool {
 		return sb.Id == id
 	})
 	return nil
 }
 
-func (s *stubProvider) List() ([]string, Error) {
+func (s *stubProvider) List(ctx context.Context) ([]string, Error) {
 	ret := []string{}
 	for i := 0; i < len(s.Boxes); i++ {
 		ret = append(ret, s.Boxes[i].Id)
@@ -105,23 +105,23 @@ var errFoo Error = newError("foo error")
 
 type stubFailingProvider struct{}
 
-func (s *stubFailingProvider) Create(id string) (Box, Error) {
+func (s *stubFailingProvider) Create(ctx context.Context, id string) (Box, Error) {
 	return nil, errFoo
 }
 
-func (s *stubFailingProvider) Get(id string) (Box, Error) {
+func (s *stubFailingProvider) Get(ctx context.Context, id string) (Box, Error) {
 	return nil, errFoo
 }
 
-func (s *stubFailingProvider) Contains(id string) bool {
+func (s *stubFailingProvider) Contains(ctx context.Context, id string) bool {
 	return false
 }
 
-func (s *stubFailingProvider) Delete(id string) Error {
+func (s *stubFailingProvider) Delete(ctx context.Context, id string) Error {
 	return errFoo
 }
 
-func (s *stubFailingProvider) List() ([]string, Error) {
+func (s *stubFailingProvider) List(ctx context.Context) ([]string, Error) {
 	return nil, errFoo
 }
 

@@ -1,6 +1,7 @@
 package filesystem
 
 import (
+	"context"
 	"io/fs"
 	"log"
 	"os"
@@ -64,7 +65,7 @@ func TestProvider_Create(t *testing.T) {
 	p := createProvider(path, dir)
 
 	t.Run("create and return box", func(t *testing.T) {
-		got, err := p.Create("box_1")
+		got, err := p.Create(context.TODO(), "box_1")
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
@@ -86,14 +87,14 @@ func TestProvider_Create(t *testing.T) {
 	})
 
 	t.Run("return error by empty id", func(t *testing.T) {
-		b, got := p.Create("")
+		b, got := p.Create(context.TODO(), "")
 
 		assert.Nil(t, b)
 		assert.Error(t, got, ErrEmptyBoxIdentifier)
 	})
 
 	t.Run("returns error for the id duplicity", func(t *testing.T) {
-		b, got := p.Create("box_1")
+		b, got := p.Create(context.TODO(), "box_1")
 
 		assert.Nil(t, b)
 		assert.Error(t, got, ErrRepeatedBoxIdentifier)
@@ -110,7 +111,7 @@ func TestProvider_Get(t *testing.T) {
 	createBox(p, "box_1")
 
 	t.Run("return box", func(t *testing.T) {
-		got, err := p.Get("box_1")
+		got, err := p.Get(context.TODO(), "box_1")
 
 		assert.Nil(t, err)
 		assert.NotNil(t, got)
@@ -121,7 +122,7 @@ func TestProvider_Get(t *testing.T) {
 	})
 
 	t.Run("return error because box doesn't exist", func(t *testing.T) {
-		b, got := p.Get("box_2")
+		b, got := p.Get(context.TODO(), "box_2")
 
 		assert.Nil(t, b)
 		assert.Error(t, got, mailbox.ErrBoxNotFound)
@@ -138,13 +139,13 @@ func TestProvider_Contains(t *testing.T) {
 	createBox(p, "box_1")
 
 	t.Run("returns true and nil error", func(t *testing.T) {
-		got := p.Contains("box_1")
+		got := p.Contains(context.TODO(), "box_1")
 
 		assert.True(t, got)
 	})
 
 	t.Run("returns false and nil error", func(t *testing.T) {
-		got := p.Contains("box_2")
+		got := p.Contains(context.TODO(), "box_2")
 
 		assert.False(t, got)
 	})
@@ -160,7 +161,7 @@ func TestProvider_Delete(t *testing.T) {
 	createBox(p, "box_1")
 
 	t.Run("delete box", func(t *testing.T) {
-		got := p.Delete("box_1")
+		got := p.Delete(context.TODO(), "box_1")
 
 		assert.Nil(t, got)
 		assert.NotContainsFunc(t, p.boxes, "box_1", func(b *boxFile, id string) bool {
