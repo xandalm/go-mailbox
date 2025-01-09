@@ -22,90 +22,6 @@ var (
 
 type Bytes = mailbox.Bytes
 
-type ioResult[T any] struct {
-	data T
-	err  error
-}
-
-func getDirectoryNamesFn[T []string](ch chan ioResult[T], f *os.File) {
-	f.Seek(0, 0)
-	names, err := f.Readdirnames(0)
-	ch <- ioResult[T]{names, err}
-}
-
-func getDirectoryNames(f *os.File) chan ioResult[[]string] {
-	ch := make(chan ioResult[[]string], 1)
-	go getDirectoryNamesFn(ch, f)
-	return ch
-}
-
-func getDirectoryEntriesFn[T []fs.DirEntry](ch chan ioResult[T], f *os.File) {
-	f.Seek(0, 0)
-	entries, err := f.ReadDir(0)
-	ch <- ioResult[T]{entries, err}
-}
-
-func getDirectoryEntries(f *os.File) chan ioResult[[]fs.DirEntry] {
-	ch := make(chan ioResult[[]fs.DirEntry], 1)
-	go getDirectoryEntriesFn(ch, f)
-	return ch
-}
-
-func getFileInfoFromDirEntryFn[T *fs.FileInfo](ch chan ioResult[T], e fs.DirEntry) {
-	info, err := e.Info()
-	ch <- ioResult[T]{&info, err}
-}
-
-func getFileInfoFromDirEntry(e fs.DirEntry) chan ioResult[*fs.FileInfo] {
-	ch := make(chan ioResult[*fs.FileInfo], 1)
-	go getFileInfoFromDirEntryFn(ch, e)
-	return ch
-}
-
-func getFileInfoFn[T *fs.FileInfo](ch chan ioResult[T], name string) {
-	info, err := os.Stat(name)
-	ch <- ioResult[T]{&info, err}
-}
-
-func getFileInfo(name string) chan ioResult[*fs.FileInfo] {
-	ch := make(chan ioResult[*fs.FileInfo], 1)
-	go getFileInfoFn(ch, name)
-	return ch
-}
-
-func readFileContentFn[T []byte](ch chan ioResult[T], name string) {
-	data, err := os.ReadFile(name)
-	ch <- ioResult[T]{data, err}
-}
-
-func readFileContent(name string) chan ioResult[[]byte] {
-	ch := make(chan ioResult[[]byte], 1)
-	go readFileContentFn(ch, name)
-	return ch
-}
-
-func openFileFn[T *os.File](ch chan ioResult[T], name string) {
-	f, err := os.OpenFile(name, os.O_CREATE|os.O_RDWR, 0666)
-	ch <- ioResult[T]{f, err}
-}
-
-func openFile(name string) chan ioResult[*os.File] {
-	ch := make(chan ioResult[*os.File], 1)
-	go openFileFn(ch, name)
-	return ch
-}
-
-func writeContentFn(ch chan bool, f *os.File, c []byte) {
-	_, err := f.Write(c)
-	ch <- (err == nil)
-}
-
-func writeContent(f *os.File, c []byte) chan bool {
-	ch := make(chan bool, 1)
-	go writeContentFn(ch, f, c)
-	return ch
-}
-
 type box struct {
 	p   *provider
 	bf  *boxFile
@@ -346,7 +262,7 @@ func (b *box) PostWithContext(ctx context.Context, c Bytes) (mailbox.Data, mailb
 	case <-ctx.Done():
 		os.Remove(name)
 		return mailbox.Data{}, mailbox.ErrUnableToPostContent
-	case got := <-openFile(name):
+	case got := <-openFileRW(name):
 		if got.err != nil {
 			return mailbox.Data{}, mailbox.ErrUnableToPostContent
 		}
@@ -357,8 +273,8 @@ func (b *box) PostWithContext(ctx context.Context, c Bytes) (mailbox.Data, mailb
 	select {
 	case <-ctx.Done():
 		err = mailbox.ErrUnableToPostContent
-	case ok := <-writeContent(f, c):
-		if !ok {
+	case err := <-writeContent(f, c):
+		if err != nil {
 			err = mailbox.ErrUnableToPostContent
 		}
 	}

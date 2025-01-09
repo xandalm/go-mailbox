@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"os"
@@ -129,6 +128,8 @@ func (p *provider) getBox(id string) *boxFile {
 	return p.boxes[pos]
 }
 
+var uint64_0 = []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+
 func (p *provider) Create(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
 
 	if id == "" {
@@ -142,37 +143,61 @@ func (p *provider) Create(ctx context.Context, id string) (mailbox.Box, mailbox.
 
 	path := join(p.path, id)
 
-	err := os.Mkdir(path, 0666)
-	if err != nil {
-		p.removeBox(bf)
-		return nil, mailbox.ErrUnableToCreateBox
+	select {
+	case <-ctx.Done():
+		goto Fail1
+	case err := <-createDir(path):
+		if err != nil {
+			goto Fail1
+		}
 	}
 
-	f, err := os.Open(path)
-	if err != nil {
-		p.removeBox(bf)
-		return nil, mailbox.ErrUnableToCreateBox
+	select {
+	case <-ctx.Done():
+		goto Fail2
+	case got := <-openFile(path):
+		if got.err != nil {
+			goto Fail2
+		}
+		bf.f = got.data
 	}
-	bf.f = f
 
-	var idb uint64
-	f, err = os.OpenFile(join(path, idBiasFilename), os.O_CREATE|os.O_RDWR, 0666)
-	if err == nil {
-		err = binary.Write(f, binary.BigEndian, idb)
+	select {
+	case <-ctx.Done():
+		goto Fail3
+	case got := <-openFileRW(join(path, idBiasFilename)):
+		if got.err != nil {
+			goto Fail3
+		}
+		bf.idbf = got.data
 	}
-	if err != nil {
-		bf.f.Close()
-		os.Remove(path)
-		p.removeBox(bf)
-		return nil, mailbox.ErrUnableToCreateBox
+
+	select {
+	case <-ctx.Done():
+		goto Fail4
+	case err := <-writeContent(bf.idbf, uint64_0):
+		if err != nil {
+			goto Fail4
+		}
 	}
-	bf.idbf = f
 
 	return &box{
-		p:   p,
-		bf:  bf,
-		idb: idb,
+		p:  p,
+		bf: bf,
 	}, nil
+
+Fail1:
+	p.removeBox(bf)
+	return nil, mailbox.ErrUnableToCreateBox
+Fail2:
+	os.Remove(path)
+	goto Fail1
+Fail3:
+	bf.f.Close()
+	goto Fail2
+Fail4:
+	bf.idbf.Close()
+	goto Fail3
 }
 
 func (p *provider) Get(ctx context.Context, id string) (mailbox.Box, mailbox.Error) {
@@ -203,16 +228,23 @@ func (p *provider) Delete(ctx context.Context, id string) mailbox.Error {
 	p.removeBox(bf)
 
 	if err := bf.f.Close(); err != nil {
-		p.insertBox(bf)
-		return mailbox.ErrUnableToDeleteBox
+		goto Fail
 	}
 	if err := bf.idbf.Close(); err != nil {
-		p.insertBox(bf)
-		return mailbox.ErrUnableToDeleteBox
+		goto Fail
 	}
-	if err := os.RemoveAll(join(p.path, id)); err != nil {
-		p.insertBox(bf)
-		return mailbox.ErrUnableToDeleteBox
+
+	select {
+	case <-ctx.Done():
+	case err := <-remove(join(p.path, id)):
+		if err != nil {
+			goto Fail
+		}
 	}
+
 	return nil
+
+Fail:
+	p.insertBox(bf)
+	return mailbox.ErrUnableToDeleteBox
 }
